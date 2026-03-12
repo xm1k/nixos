@@ -15,8 +15,10 @@ in
   programs.niri.enable = true;
 
   home-manager.users.root = {
-    home.stateVersion = "25.11";
-    home.file.".config/niri/config.kdl".source = ./config.kdl;
+    home.file.".config/niri/config.kdl" = {
+      source = ./config.kdl;
+      force  = true;
+    };
   };
 
 }
