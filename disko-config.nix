@@ -17,13 +17,15 @@
                 mountOptions = [ "umask=0077" ];
               };
             };
+
             swap = {
               size = "8G";
               content = {
-                type = "filesystem";
-                format = "swap";
+                type = "swap";
+                resumeDevice = true;
               };
             };
+
             root = {
               size = "100%";
               content = {
