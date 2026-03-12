@@ -10,9 +10,10 @@
 
   programs.niri.enable = true;
 
-  programs.niri.settings = {
-    theme = "default";
-    iconSize = 24;
-    position = "top-right";
-  };
+  environment.etc."niri/config".text = ''
+    theme=default
+    icon_size=24
+    position=top-right
+  '';
+  
 }
