@@ -9,6 +9,7 @@
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./desktop/niri/niri.nix
+      <home-manager/nixos>
     ];
 
   # Use the systemd-boot EFI boot loader.

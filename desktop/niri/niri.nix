@@ -1,5 +1,9 @@
 { config, pkgs, lib, ... }:
 
+let
+  niriConfigFile = ./config.kdl;
+in
+
 {
   environment.systemPackages = with pkgs; [
     alacritty
@@ -10,9 +14,9 @@
 
   programs.niri.enable = true;
 
-  system.activationScripts.niri-config = ''
-    mkdir -p /home/root/.config/niri
-    cp ${./config.kdl} /home/root/.config/niri/config.kdl
-  '';
+  home-manager.users.root = {
+    home.stateVersion = "25.11";
+    home.file.".config/niri/config.kdl".source = ./config.kdl;
+  };
 
 }
