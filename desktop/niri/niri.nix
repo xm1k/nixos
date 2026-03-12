@@ -10,6 +10,6 @@
 
   programs.niri.enable = true;
 
-  environment.etc."niri/config.kdl".text = builtins.readFile ./config.kdl;
+  home.file.".config/niri/config.kdl".source = ./config.kdl;
 
 }
