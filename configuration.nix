@@ -8,6 +8,7 @@
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      ./desktop/niri.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -84,10 +85,6 @@
      git
      python310
      docker
-     alacritty
-     fuzzel
-     waybar
-     mako
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
