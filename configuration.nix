@@ -8,7 +8,7 @@
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
-      ./desktop/niri.nix
+      ./desktop/niri/niri.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
