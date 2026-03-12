@@ -10,6 +10,9 @@
 
   programs.niri.enable = true;
 
-  home.file.".config/niri/config.kdl".source = ./config.kdl;
+  system.activationScripts.niri-config = ''
+    mkdir -p /home/root/.config/niri
+    cp ${./desktop/niri/config.kdl} /home/root/.config/niri/config.kdl
+  '';
 
 }
