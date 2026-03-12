@@ -11,9 +11,13 @@
   programs.niri.enable = true;
 
   environment.etc."niri/config".text = ''
-    theme=default
-    icon_size=24
+    theme=dark
+    icon_size=32
     position=top-right
+    spacing=10
+    opacity=0.85
+    animations=true
+    auto_hide=false
   '';
-  
+
 }
