@@ -17,7 +17,6 @@
                 mountOptions = [ "umask=0077" ];
               };
             };
-
             swap = {
               size = "8G";
               content = {
@@ -25,7 +24,6 @@
                 format = "swap";
               };
             };
-
             root = {
               size = "100%";
               content = {
