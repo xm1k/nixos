@@ -12,7 +12,7 @@
 
   system.activationScripts.niri-config = ''
     mkdir -p /home/root/.config/niri
-    cp ${./desktop/niri/config.kdl} /home/root/.config/niri/config.kdl
+    cp ${./config.kdl} /home/root/.config/niri/config.kdl
   '';
 
 }
