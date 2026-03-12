@@ -101,6 +101,13 @@
     PasswordAuthentication = true;
   };
 
+  nix.settings = {
+    show-trace = true;
+    extra-experimental-features = [ "nix-command" "flakes" ];
+    extra-sandbox-paths = [];
+    show-progress = true;
+  };
+
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
   # networking.firewall.allowedUDPPorts = [ ... ];
