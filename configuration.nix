@@ -42,7 +42,6 @@
     show-trace = true;
     extra-experimental-features = [ "nix-command" "flakes" ];
     extra-sandbox-paths = [];
-    show-progress = true;
     max-jobs = 4;
   };
 
