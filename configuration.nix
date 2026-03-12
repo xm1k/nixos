@@ -38,7 +38,14 @@
   # services.xserver.enable = true;
 
 
-  
+  nix.settings = {
+    show-trace = true;
+    extra-experimental-features = [ "nix-command" "flakes" ];
+    extra-sandbox-paths = [];
+    show-progress = true;
+    max-jobs = 4;
+  };
+
 
   # Configure keymap in X11
   # services.xserver.xkb.layout = "us";
@@ -100,22 +107,6 @@
     PermitRootLogin = "yes";
     PasswordAuthentication = true;
   };
-
-nix.settings = {
-  show-trace = true;
-  max-jobs = 4;
-  extra-experimental-features = [ "nix-command" "flakes" ];
-
-  substituters = [
-    "https://nixos-cache-proxy.cofob.dev"
-    "https://cache.nixos.org"
-    "https://nix-community.cachix.org"
-  ];
-};
-
-environment.variables = {
-  NIX_SHOW_PROGRESS = "1";
-};
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
