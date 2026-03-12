@@ -67,7 +67,7 @@
   #   ];
   # };
 
-  # programs.firefox.enable = true;
+  programs.niri.enable = true;
 
   # List packages installed in system profile.
   # You can use https://search.nixos.org/ to find more packages (and options).
@@ -78,6 +78,10 @@
      git
      python310
      docker
+     alacritty
+     fuzzel
+     waybar
+     mako
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
