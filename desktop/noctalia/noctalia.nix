@@ -5,7 +5,6 @@
   environment.systemPackages = with pkgs; [
     pkgs.kdePackages.kdeconnect-kde
     pkgs.kdePackages.qttools
-    inputs.agenix.packages."${system}".default
   ];
 
   programs.kdeconnect.enable = true;

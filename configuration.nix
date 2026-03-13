@@ -2,7 +2,7 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, inputs, ... }:
 
 {
   imports =
@@ -93,7 +93,12 @@
     git
     python310
     docker
+    inputs.agenix.packages."${system}".default
   ];
+
+  environment.variables = {
+    MY_SECRET_FILE = config.age.secrets.password.path;
+  };
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
