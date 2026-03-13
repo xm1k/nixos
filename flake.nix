@@ -55,7 +55,7 @@
         ./configuration.nix
         home-manager.nixosModules.home-manager
         ./desktop/noctalia/noctalia.nix
-
+        agenix.nixosModules.default
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
