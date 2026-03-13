@@ -6,6 +6,7 @@
   ];
 
   programs.kdeconnect.enable = true;
+  home-manager.backupFileExtension = "backup";
 
   home-manager.users.root = {
     imports = [
