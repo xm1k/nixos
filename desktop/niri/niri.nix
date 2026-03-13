@@ -11,6 +11,24 @@
   programs.niri.enable = true;
 
   home-manager.users.root = {
+
+    imports = [
+      inputs.noctalia.homeModules.default
+    ];
+
+    programs.niri = {
+      package = niri;
+      settings = {
+        spawn-at-startup = [
+          {
+            command = [
+              "noctalia-shell"
+            ];
+          }
+        ];
+      };
+    };
+
     home.file.".config/niri/config.kdl" = {
       source = ./config.kdl;
       force  = true;
