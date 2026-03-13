@@ -11,16 +11,6 @@
       ./desktop/niri/niri.nix
     ];
 
-
-  age.secrets = {
-        password = {
-            file = ./secrets/password.age;
-            owner = "xm1k";
-            group = "xm1k";
-            mode = "0400";
-        };
-    };
-
   # Use the systemd-boot EFI boot loader.
   nixpkgs.config.allowUnfree = true;
   boot.loader.systemd-boot.enable = true;
@@ -105,6 +95,8 @@
     docker
     inputs.agenix.packages."${system}".default
   ];
+
+  age.secrets.password.file = ../secrets/password.age;
 
   environment.variables = {
     MY_SECRET_FILE = config.age.secrets.password.path;
