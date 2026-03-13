@@ -5,6 +5,11 @@
 { config, lib, pkgs, inputs, ... }:
 
 {
+  fonts.packages = with pkgs; [
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.fira-code
+  ];
+  
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
