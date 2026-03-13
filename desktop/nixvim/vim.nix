@@ -1,38 +1,36 @@
 { pkgs, ... }:
 
 {
+  environment.systemPackages = with pkgs; [
+    ripgrep
+  ];
+
   programs.nixvim = {
     enable = true;
     defaultEditor = true;
 
-    # Цветовая схема
     colorschemes.catppuccin = {
       enable = true;
       settings.flavour = "mocha";
     };
 
-    # Настройки опций (vim.opt)
     opts = {
-      number = true;         # Номера строк
-      relativenumber = true; # Относительные номера
-      shiftwidth = 2;        # Размер табуляции
+      number = true;
+      relativenumber = true;
+      shiftwidth = 2;
       tabstop = 2;
       smartindent = true;
       termguicolors = true;
-      cursorline = true;     # Подсветка строки под курсором
+      cursorline = true;
     };
 
     plugins = {
-      # Статусная строка
       lualine.enable = true;
 
-      # Дерево файлов
       neo-tree.enable = true;
 
-      # Подсветка синтаксиса
       treesitter.enable = true;
 
-      # Телескоп (поиск всего и вся)
       telescope = {
         enable = true;
         keymaps = {
@@ -41,17 +39,15 @@
         };
       };
 
-      # LSP (Умный код)
       lsp = {
         enable = true;
         servers = {
-          nil_ls.enable = true;    # Для Nix
-          pyright.enable = true;   # Для Python
-          ts_ls.enable = true;     # Для JS/TS
+          nil_ls.enable = true;
+          pyright.enable = true;
+          ts_ls.enable = true;
         };
       };
 
-      # Автодополнение
       cmp = {
         enable = true;
         settings = {
@@ -70,8 +66,13 @@
       };
     };
 
-    # Твои бинды
     keymaps = [
+      {
+        mode = "n";
+        key = "<leader>e";
+        action = ":Neotree focus<CR>";
+        options.silent = true;
+      }
       {
         mode = "n";
         key = "<leader>n";
@@ -80,7 +81,6 @@
       }
     ];
 
-    # Глобальная переменная для лидера (пробел)
-    globals.mapleader = " ";
+    globals.mapleader = "Alt";
   };
 }
