@@ -9,8 +9,17 @@
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./desktop/niri/niri.nix
-      ./secrets/sec.nix
     ];
+
+
+  age.secrets = {
+        password = {
+            file = ./secrets/password.age;
+            owner = "xm1k";
+            group = "xm1k";
+            mode = "0400";
+        };
+    };
 
   # Use the systemd-boot EFI boot loader.
   nixpkgs.config.allowUnfree = true;
