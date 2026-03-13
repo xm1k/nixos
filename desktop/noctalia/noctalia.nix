@@ -1,9 +1,6 @@
 { pkgs, inputs, ... }:
 
 {
-  environment.systemPackages = with pkgs; [
-    kdeconnect
-  ];
 
   programs.kdeconnect.enable = true;
   home-manager.backupFileExtension = "backup";
