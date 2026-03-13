@@ -274,16 +274,8 @@ spawn-at-startup "waybar"
 // spawn-sh-at-startup "qs -c ~/source/qs/MyAwesomeShell"
 
 hotkey-overlay {
-    hotkey {
-    key "Alt+W"
-    hotkey-overlay-title "Open a Terminal: alacritty"
-    spawn "alacritty"
-    }
-    hotkey {
-        key "Alt+Q"
-        repeat false
-        actions ["close-window"]
-    }
+    Alt+W hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
+    Alt+Q hotkey-overlay-title="Close window" { close-window; }
 }
 
 // Uncomment this line to ask the clients to omit their client-side decorations if possible.
