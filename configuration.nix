@@ -9,6 +9,8 @@
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./desktop/niri/niri.nix
+      inputs.nixvim.homeModules.nixvim
+      ./desktop/nixvim/nixvim.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
