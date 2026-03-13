@@ -8,12 +8,11 @@
     mako
   ];
 
-  programs.niri.enable = true;
-
   home-manager.users.root = {
 
     programs.niri = {
-      package = niri;
+      enable  = true;
+      package = pkgs.niri;
       settings = {
         spawn-at-startup = [
           {
