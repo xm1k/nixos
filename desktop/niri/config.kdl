@@ -275,14 +275,14 @@ spawn-at-startup "waybar"
 
 hotkey-overlay {
     hotkey {
-    key = "Alt+W"
-    hotkey-overlay-title = "Open a Terminal: alacritty"
-    spawn = "alacritty"
+    key "Alt+W"
+    hotkey-overlay-title "Open a Terminal: alacritty"
+    spawn "alacritty"
     }
     hotkey {
-        key = "Alt+Q"
-        repeat = false
-        actions = ["close-window"]
+        key "Alt+Q"
+        repeat false
+        actions ["close-window"]
     }
 }
 
