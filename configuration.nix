@@ -96,7 +96,7 @@
     inputs.agenix.packages."${system}".default
   ];
 
-  age.secrets.password.file = ../secrets/password.age;
+  age.secrets.password.file = ./secrets/password.age;
 
   environment.variables = {
     MY_SECRET_FILE = config.age.secrets.password.path;
