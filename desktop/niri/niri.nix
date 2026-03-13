@@ -12,10 +12,6 @@
 
   home-manager.users.root = {
 
-    imports = [
-      inputs.noctalia.homeModules.default
-    ];
-
     programs.niri = {
       package = niri;
       settings = {
