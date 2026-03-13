@@ -1,8 +1,23 @@
 { pkgs, inputs, ... }:
+
 {
-  # install package
-  environment.systemPackages = with pkgs; [
-    inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default
-    # ... maybe other stuff
-  ];
+  home-manager.users.root = {
+    imports = [
+      inputs.noctalia.homeModules.default
+    ];
+
+    # включаем Noctalia
+    programs.noctalia-shell = {
+      enable = true;
+
+      settings = {
+        # ваши настройки Noctalia здесь
+        bar.position = "right";
+        # …
+      };
+    };
+
+    # (опционально) включить systemd‑сервис через HM
+    programs.noctalia-shell.systemd.enable = true;
+  };
 }
