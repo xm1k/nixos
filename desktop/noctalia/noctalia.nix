@@ -33,7 +33,7 @@
             sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
           };
 
-          "assistant-panel" = {
+          "translator" = {
             enabled   = true;
             sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
           };
