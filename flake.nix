@@ -53,6 +53,7 @@
 
       modules = [
         ./configuration.nix
+        agenix.nixosModules.default
         home-manager.nixosModules.home-manager
         ./desktop/noctalia/noctalia.nix
 
