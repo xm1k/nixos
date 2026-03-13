@@ -9,6 +9,11 @@
     enable = true;
     defaultEditor = true;
 
+    clipboard = {
+      register = "unnamedplus";
+      providers.wl-copy.enable = true;
+    }; 
+
     colorschemes.catppuccin = {
       enable = true;
       settings.flavour = "mocha";
@@ -81,6 +86,7 @@
       }
     ];
 
-    globals.mapleader = "Alt";
+    globals.mapleader = " ";
   };
 }
+

@@ -12,6 +12,7 @@
 			SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
 			SSL_CERT_DIR = "${pkgs.cacert}/etc/ssl/certs";
 			NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+			NIXOS_OZONE_WL = "1";
 	};
 
 	fonts.packages = with pkgs; [
@@ -24,6 +25,7 @@
       ./hardware-configuration.nix
       ./desktop/niri/niri.nix
       ./desktop/nixvim/vim.nix
+			./tools/vscode.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -114,6 +116,7 @@
     git
     python310
     docker
+		wl-clipboard
     inputs.agenix.packages."${system}".default
   ];
 
