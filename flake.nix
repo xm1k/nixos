@@ -22,7 +22,13 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
-      inputs = { self, nixpkgs, home-manager, noctalia, noctalia-qs };
+      inputs = {
+        self = self;
+        nixpkgs = nixpkgs;
+        home-manager = home-manager;
+        noctalia = noctalia;
+        noctalia-qs = noctalia-qs;
+      };
     in {
       nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
         inherit system;
