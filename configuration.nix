@@ -72,6 +72,8 @@
     initialPassword = "password";
   };
 
+  services.getty.autologinUser = "xm1k";
+
   programs.niri.enable = true;
 
   # List packages installed in system profile.
