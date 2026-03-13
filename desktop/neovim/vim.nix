@@ -1,55 +1,72 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, ... }:
 
 {
   programs.neovim = {
     enable = true;
+    defaultEditor = true;
     viAlias = true;
     vimAlias = true;
 
+    # Устанавливаем необходимые плагины
     configure = {
-      customRC = ''
-        set number
-        set relativenumber
-        set tabstop=4
-        set shiftwidth=4
-        set expandtab
-        set smartindent
-        set mouse=a
-        set termguicolors
-        set clipboard=unnamedplus
-
-        colorscheme gruvbox
-
-        " keybinds
-        nnoremap <leader>e :NvimTreeToggle<CR>
-        nnoremap <leader>f :Telescope find_files<CR>
-        nnoremap <leader>g :Telescope live_grep<CR>
-      '';
-
       packages.myVimPackage = with pkgs.vimPlugins; {
         start = [
-          gruvbox
-
-          # icons
-          nvim-web-devicons
-
-          # file explorer
-          nvim-tree-lua
-
-          # fuzzy search
-          telescope-nvim
-          plenary-nvim
-
-          # syntax highlighting
-          (nvim-treesitter.withAllGrammars)
-
-          # status line
+          # Внешний вид
+          catppuccin-nvim
           lualine-nvim
-
-          # git
-          gitsigns-nvim
+          nvim-web-devicons
+          
+          # Функционал
+          telescope-nvim
+          nvim-treesitter.withAllGrammars
+          neo-tree-nvim
+          
+          # LSP и автодополнение
+          nvim-lspconfig
+          nvim-cmp
+          cmp-nvim-lsp
+          luasnip
         ];
       };
+
+      # Основные настройки и конфиг плагинов на Lua
+      customRC = ''
+        lua << EOF
+          -- Настройки интерфейса
+          vim.opt.number = true         -- Номера строк
+          vim.opt.relativenumber = true -- Относительные номера
+          vim.opt.shiftwidth = 2        -- Табуляция
+          vim.opt.expandtab = true
+          vim.opt.termguicolors = true
+
+          -- Тема оформления
+          require("catppuccin").setup({ flavour = "mocha" })
+          vim.cmd.colorscheme "catppuccin"
+
+          -- Статусная строка
+          require('lualine').setup {
+            options = { theme = 'catppuccin' }
+          }
+
+          -- Настройка Treesitter (подсветка синтаксиса)
+          require('nvim-treesitter.configs').setup {
+            highlight = { enable = true },
+          }
+
+          -- Быстрые клавиши (Keymaps)
+          local builtin = require('telescope.builtin')
+          vim.keymap.set('n', '<leader>ff', builtin.find_files, {})
+          vim.keymap.set('n', '<leader>n', ':Neotree toggle<CR>', {})
+        EOF
+      '';
     };
   };
+
+  # Дополнительные инструменты для работы (LSP, форматирование)
+  environment.systemPackages = with pkgs; [
+    nil # LSP для Nix
+    lua-language-server
+    ripgrep
+    fd
+  ];
 }
