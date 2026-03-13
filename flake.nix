@@ -20,10 +20,6 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixvim = {
-      url = "github:nix-community/nixvim";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     
   };
 
@@ -33,7 +29,6 @@
             , noctalia
             , noctalia-qs
             , agenix
-            , nixvim
             , ...
             }:
 
@@ -48,7 +43,6 @@
       noctalia = noctalia;
       noctalia-qs = noctalia-qs;
       agenix = agenix;
-      nixvim = nixvim;
     };
   in
   {
@@ -67,9 +61,6 @@
           home-manager.useUserPackages = true;
 
           home-manager.users.xm1k = { pkgs, ... }: {
-            imports = [
-              nixvim.homeManagerModules.nixvim
-            ];
             home.stateVersion = "25.11";
           };
         }
