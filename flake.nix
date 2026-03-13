@@ -16,7 +16,11 @@
       url = "github:noctalia-dev/noctalia-qs";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    inputs.agenix.url = "github:ryantm/agenix";
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    }
+    
   };
 
   outputs = { self
