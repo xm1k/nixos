@@ -68,7 +68,7 @@
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.xm1k = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" ];
+    extraGroups = [ "wheel" "networkmanager" "video" ];
     initialPassword = "password";
   };
 
