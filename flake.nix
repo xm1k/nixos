@@ -18,39 +18,46 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }:
-    let
-      system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
-      inputs = {
-        self = self;
-        nixpkgs = nixpkgs;
-        home-manager = home-manager;
-        noctalia = noctalia;
-        noctalia-qs = noctalia-qs;
-      };
-    in {
-      nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-        inherit system;
+  outputs = { self
+            , nixpkgs
+            , home-manager
+            , noctalia
+            , noctalia-qs
+            , ...
+            }:
 
-        specialArgs = { inherit inputs; };
+  let
+    system = "x86_64-linux";
+    pkgs = nixpkgs.legacyPackages.${system};
 
-        modules = [
-          ./configuration.nix
-
-          home-manager.nixosModules.home-manager
-
-          ./noctalia.nix
-
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-
-            home-manager.users.root = { pkgs, ... }: {
-              home.stateVersion = "25.11";
-            };
-          }
-        ];
-      };
+    inputs = {
+      self = self;
+      nixpkgs = nixpkgs;
+      home-manager = home-manager;
+      noctalia = noctalia;
+      noctalia-qs = noctalia-qs;
     };
+  in
+  {
+    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      inherit system;
+
+      specialArgs = { inherit inputs; };
+
+      modules = [
+        ./configuration.nix
+        home-manager.nixosModules.home-manager
+        ./noctalia.nix
+
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+
+          home-manager.users.root = { pkgs, ... }: {
+            home.stateVersion = "25.11";
+          };
+        }
+      ];
+    };
+  };
 }
