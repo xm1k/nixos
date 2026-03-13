@@ -16,6 +16,7 @@
       url = "github:noctalia-dev/noctalia-qs";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    inputs.agenix.url = "github:ryantm/agenix";
   };
 
   outputs = { self
@@ -23,6 +24,7 @@
             , home-manager
             , noctalia
             , noctalia-qs
+            , agenix
             , ...
             }:
 
@@ -36,6 +38,7 @@
       home-manager = home-manager;
       noctalia = noctalia;
       noctalia-qs = noctalia-qs;
+      agenix = agenix;
     };
   in
   {

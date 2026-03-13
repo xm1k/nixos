@@ -93,7 +93,7 @@
     git
     python310
     docker
-    agenix
+    inputs.agenix.packages."${system}".default
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
