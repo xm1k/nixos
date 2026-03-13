@@ -11,9 +11,7 @@
       enable = true;
 
       settings = {
-        # ваши настройки Noctalia здесь
-        bar.position = "right";
-        # …
+        bar.position = "top";
       };
     };
 
