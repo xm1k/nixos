@@ -22,7 +22,7 @@
   networking.networkmanager.enable = true;
 
   # Set your time zone.
-  # time.timeZone = "Europe/Amsterdam";
+  time.timeZone = "Europe/Moscow";
 
   # Configure network proxy if necessary
   # networking.proxy.default = "http://user:password@proxy:port/";
@@ -73,7 +73,14 @@
     initialPassword = "password";
   };
 
-  services.xserver.enable = true;
+  services.xserver = {
+    enable = true;
+    xkb = {
+      layout = "us,ru";
+      variant = ",";
+      options = "grp:alt_shift_toggle";
+    };
+  };
   services.displayManager.sddm.enable = true;
   services.displayManager.autoLogin.enable = true;
   services.displayManager.autoLogin.user = "xm1k";
