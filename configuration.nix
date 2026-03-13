@@ -72,6 +72,11 @@
     initialPassword = "password";
   };
 
+  services.displayManager.sddm.enable = true;
+  services.displayManager.autoLogin.enable = true;
+  services.displayManager.autoLogin.user = "xm1k";
+  services.displayManager.defaultSession = "niri";
+
   services.getty.autologinUser = "xm1k";
 
   programs.niri.enable = true;
