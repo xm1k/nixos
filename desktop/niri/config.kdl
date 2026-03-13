@@ -274,10 +274,16 @@ spawn-at-startup "waybar"
 // spawn-sh-at-startup "qs -c ~/source/qs/MyAwesomeShell"
 
 hotkey-overlay {
-    // Uncomment this line to disable the "Important Hotkeys" pop-up at startup.
-    // skip-at-startup
-    Alt+W hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
-    Alt+Q repeat=false { close-window; }
+    hotkey {
+    key = "Alt+W"
+    hotkey-overlay-title = "Open a Terminal: alacritty"
+    spawn = "alacritty"
+    }
+    hotkey {
+        key = "Alt+Q"
+        repeat = false
+        actions = ["close-window"]
+    }
 }
 
 // Uncomment this line to ask the clients to omit their client-side decorations if possible.
