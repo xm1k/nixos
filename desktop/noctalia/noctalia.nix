@@ -33,7 +33,7 @@
             sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
           };
 
-          "kaomoji-provider" = {
+          "assistant-panel" = {
             enabled   = true;
             sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
           };
