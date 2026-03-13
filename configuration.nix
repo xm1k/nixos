@@ -5,7 +5,16 @@
 { config, lib, pkgs, inputs, ... }:
 
 {
-  fonts.packages = with pkgs; [
+
+	security.pki.certificateFiles = [ "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
+
+	environment.variables = {
+			SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+			SSL_CERT_DIR = "${pkgs.cacert}/etc/ssl/certs";
+			NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+	};
+
+	fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.fira-code
   ];
