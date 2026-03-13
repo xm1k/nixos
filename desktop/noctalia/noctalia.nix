@@ -10,7 +10,7 @@
   programs.kdeconnect.enable = true;
   home-manager.backupFileExtension = "backup";
 
-  home-manager.users.root = {
+  home-manager.users.xm1k = {
     imports = [
       inputs.noctalia.homeModules.default
     ];

@@ -10,7 +10,7 @@
 
   programs.niri.enable = true;
 
-  home-manager.users.root = {
+  home-manager.users.xm1k = {
     home.file.".config/niri/config.kdl" = {
       source = ./config.kdl;
       force  = true;

@@ -53,7 +53,7 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
 
-          home-manager.users.root = { pkgs, ... }: {
+          home-manager.users.xm1k = { pkgs, ... }: {
             home.stateVersion = "25.11";
           };
         }
