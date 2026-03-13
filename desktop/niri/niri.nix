@@ -1,9 +1,5 @@
 { config, pkgs, lib, ... }:
 
-let
-  niriConfigFile = ./config.kdl;
-in
-
 {
   environment.systemPackages = with pkgs; [
     alacritty
