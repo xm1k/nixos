@@ -2,9 +2,10 @@
 
 {
   environment.systemPackages = with pkgs; [
-    pkgs.kdePackages.kdeconnect
     pkgs.kdePackages.qttools
   ];
+
+  programs.kdeconnect.enable = true;
 
   home-manager.users.root = {
     imports = [
