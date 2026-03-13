@@ -33,6 +33,7 @@
             , noctalia
             , noctalia-qs
             , agenix
+            , nixvim
             , ...
             }:
 
@@ -47,6 +48,7 @@
       noctalia = noctalia;
       noctalia-qs = noctalia-qs;
       agenix = agenix;
+      nixvim = nixvim;
     };
   in
   {
