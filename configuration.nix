@@ -85,12 +85,13 @@
   # List packages installed in system profile.
   # You can use https://search.nixos.org/ to find more packages (and options).
   environment.systemPackages = with pkgs; [
-     vim
-     wget
-     curl
-     git
-     python310
-     docker
+    vivaldi
+    vim
+    wget
+    curl
+    git
+    python310
+    docker
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
