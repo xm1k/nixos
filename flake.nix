@@ -20,7 +20,10 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    
+    nixvim = {
+      url = "github:nix-community/nixvim/nixos-25.11";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = { self
@@ -29,21 +32,13 @@
             , noctalia
             , noctalia-qs
             , agenix
+            , nixvim
             , ...
-            }:
+            }@inputs:
 
   let
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
-
-    inputs = {
-      self = self;
-      nixpkgs = nixpkgs;
-      home-manager = home-manager;
-      noctalia = noctalia;
-      noctalia-qs = noctalia-qs;
-      agenix = agenix;
-    };
   in
   {
     nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
@@ -54,6 +49,7 @@
       modules = [
         ./configuration.nix
         home-manager.nixosModules.home-manager
+        nixvim.nixosModules.nixvim
         ./desktop/noctalia/noctalia.nix
         agenix.nixosModules.default
         {

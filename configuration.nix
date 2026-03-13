@@ -9,7 +9,7 @@
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./desktop/niri/niri.nix
-      ./desktop/neovim/vim.nix
+      ./desktop/nixvim/vim.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -95,7 +95,6 @@
   # You can use https://search.nixos.org/ to find more packages (and options).
   environment.systemPackages = with pkgs; [
     vivaldi
-    vim
     wget
     curl
     git
