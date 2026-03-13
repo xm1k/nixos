@@ -2,6 +2,7 @@
 
 {
   environment.systemPackages = with pkgs; [
+    pkgs.kdePackages.kdeconnect-kde
     pkgs.kdePackages.qttools
   ];
 
