@@ -9,7 +9,7 @@
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
       ./desktop/niri/niri.nix
-      ./desctop/nneovim/vim.nix
+      ./desktop/neovim/vim.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
