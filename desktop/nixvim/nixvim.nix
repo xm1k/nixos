@@ -1,24 +1,26 @@
-programs.nixvim = {
-  enable = true;
+{
+    programs.nixvim = {
+        enable = true;
 
-  colorschemes.catppuccin.enable = true;
+        colorschemes.catppuccin.enable = true;
 
-  plugins = {
-    lualine.enable = true;
-    telescope.enable = true;
-    treesitter.enable = true;
-    nvim-tree.enable = true;
+        plugins = {
+            lualine.enable = true;
+            telescope.enable = true;
+            treesitter.enable = true;
+            nvim-tree.enable = true;
 
-    cmp = {
-      enable = true;
-      autoEnableSources = true;
+            cmp = {
+            enable = true;
+            autoEnableSources = true;
+            };
+
+            lsp.enable = true;
+        };
+
+        opts = {
+            number = true;
+            relativenumber = true;
+        };
     };
-
-    lsp.enable = true;
-  };
-
-  opts = {
-    number = true;
-    relativenumber = true;
-  };
-};
+}
