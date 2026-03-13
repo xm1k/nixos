@@ -67,6 +67,9 @@
           home-manager.useUserPackages = true;
 
           home-manager.users.xm1k = { pkgs, ... }: {
+            imports = [
+              nixvim.homeManagerModules.nixvim
+            ];
             home.stateVersion = "25.11";
           };
         }
