@@ -93,6 +93,7 @@
     git
     python310
     docker
+    pkgs.agenix-cli
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
