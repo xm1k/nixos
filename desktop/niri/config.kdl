@@ -159,7 +159,7 @@ layout {
         // off
 
         // How many logical pixels the ring extends out from the windows.
-        width 10
+        width 4
 
         // Colors can be set in a variety of ways:
         // - CSS named colors: "red"
@@ -276,6 +276,8 @@ spawn-at-startup "waybar"
 hotkey-overlay {
     // Uncomment this line to disable the "Important Hotkeys" pop-up at startup.
     // skip-at-startup
+    Alt+W hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
+    Alt+Q repeat=false { close-window; }
 }
 
 // Uncomment this line to ask the clients to omit their client-side decorations if possible.
@@ -341,7 +343,7 @@ window-rule {
 
 // Example: enable rounded corners for all windows.
 // (This example rule is commented out with a "/-" in front.)
-/-window-rule {
+window-rule {
     geometry-corner-radius 12
     clip-to-geometry true
 }
