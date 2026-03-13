@@ -96,6 +96,10 @@
     inputs.agenix.packages."${system}".default
   ];
 
+  age.identityPaths = [
+    "/home/xm1k/.ssh/id_ed25519"
+  ];
+
   age.secrets.password.file = ./secrets/password.age;
 
   environment.variables = {
