@@ -2,8 +2,7 @@
 
 {
   environment.systemPackages = with pkgs; [
-    pkgs.kdePackages.kdeconnect-kde
-    pkgs.kdePackages.qttools
+    kdeconnect
   ];
 
   programs.kdeconnect.enable = true;
