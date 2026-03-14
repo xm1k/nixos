@@ -26,6 +26,7 @@
       ./desktop/niri/niri.nix
       ./desktop/nixvim/vim.nix
 			./tools/vscode.nix
+      ./desktop/starship/starship.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -84,9 +85,11 @@
   # services.libinput.enable = true;
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.xm1k = {
+  users.groups.battery_ctl = {};
+
+	users.users.xm1k = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "video" ];
+    extraGroups = [ "wheel" "networkmanager" "video" "battery_ctl" ];
     initialPassword = "password";
   };
 
@@ -118,8 +121,15 @@
     docker
 		wl-clipboard
 		fastfetch
+		unzip
     inputs.agenix.packages."${system}".default
   ];
+
+	services.udev.extraRules = ''
+    SUBSYSTEM=="power_supply", KERNEL=="BAT*", \
+      RUN+="${pkgs.coreutils}/bin/chgrp battery_ctl /sys%p/charge_control_end_threshold", \
+      RUN+="${pkgs.coreutils}/bin/chmod g+w /sys%p/charge_control_end_threshold"
+  '';	
 
   age.identityPaths = [
     "/home/xm1k/.ssh/id_ed25519"
@@ -179,4 +189,5 @@
   system.stateVersion = "25.11"; # Did you read the comment?
 
 }
+
 

@@ -3,9 +3,6 @@
 {
   environment.systemPackages = with pkgs; [
     alacritty
-    fuzzel
-    waybar
-    mako
   ];
 
   programs.niri.enable = true;

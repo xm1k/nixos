@@ -38,13 +38,39 @@
             sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
           };
 
+					"battery-threshold" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+					"screen-recorder" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
         };
 
         version = 2;
       };
 
       settings = {
-        bar.position = "top";
+        bar = {
+					position = "top";
+					layout = {
+						start = [
+							"launcher"
+							"workspaces"
+						];
+						center = [
+							"clock"
+						];
+						end = [
+							"network"
+							"battery"
+							"notifications"
+						];
+					};
+				};
       };
     };
   };
