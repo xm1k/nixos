@@ -1,0 +1,21 @@
+format = """
+[ $username](bold green)@[ $hostname](bold green):[ $path](bold blue)❄️ $character
+"""
+
+[username]
+style_root = "bold red"
+style_user = "bold green"
+show_always = true
+
+[hostname]
+ssh_only = false
+style = "bold green"
+
+[directory]
+truncation_length = 3
+truncation_symbol = "…/"
+style = "bold blue"
+
+[character]
+success_symbol = "[❄️](bold white) "
+error_symbol = "[❄️](bold red) "

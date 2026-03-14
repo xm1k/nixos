@@ -26,6 +26,7 @@
       ./desktop/niri/niri.nix
       ./desktop/nixvim/vim.nix
 			./tools/vscode.nix
+      ./desctop/starship/starship.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -179,4 +180,5 @@
   system.stateVersion = "25.11"; # Did you read the comment?
 
 }
+
 
