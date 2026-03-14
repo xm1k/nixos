@@ -4,7 +4,7 @@
 
 { config, lib, pkgs, inputs, ... }:
 
-{
+{	
 
 	security.pki.certificateFiles = [ "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
 
@@ -22,10 +22,16 @@
   
   imports =
     [ # Include the results of the hardware scan.
+      ./games/core.nix
       ./hardware-configuration.nix
       ./desktop/niri/niri.nix
       ./desktop/nixvim/vim.nix
 			./tools/vscode.nix
+			./tools/work.nix
+      ./desktop/starship/starship.nix
+			./tools/podman/podman.nix
+			./secrets/secrets-manager.nix
+			./network/byedpi.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -35,8 +41,21 @@
 
   # networking.hostName = "nixos"; # Define your hostname.
 
-  # Configure network connections interactively with nmcli or nmtui.
-  networking.networkmanager.enable = true;
+	services.resolved = {
+		enable = true;
+		fallbackDns = [ "1.1.1.1" "8.8.8.8" ];
+	};
+
+  networking= {
+    extraHosts = ''
+      192.168.31.63 b.net
+    '';
+		networkmanager = {
+			enable = true;
+			dns = "systemd-resolved";
+		};
+		nameservers = [ "1.1.1.1" "8.8.8.8" ];
+	};
 
   # Set your time zone.
   time.timeZone = "Europe/Moscow";
@@ -56,6 +75,10 @@
   # Enable the X11 windowing system.
   # services.xserver.enable = true;
 
+	# RAM managing
+	boot.tmp.useTmpfs = true;
+	boot.tmp.tmpfsSize = "50%"; # выделяем до половины ОЗУ под /tmp
+	services.psd.enable = true;
 
   nix.settings = {
     show-trace = true;
@@ -84,9 +107,11 @@
   # services.libinput.enable = true;
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.xm1k = {
+  users.groups.battery_ctl = {};
+
+	users.users.xm1k = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" "video" ];
+    extraGroups = [ "wheel" "networkmanager" "video" "battery_ctl" "input" ];
     initialPassword = "password";
   };
 
@@ -104,6 +129,7 @@
   services.displayManager.defaultSession = "niri";
 
   services.getty.autologinUser = "xm1k";
+	services.upower.enable = true;
 
   programs.niri.enable = true;
 
@@ -118,17 +144,30 @@
     docker
 		wl-clipboard
 		fastfetch
-    inputs.agenix.packages."${system}".default
-  ];
+		unzip
+		unrar
+		mpv
+		ansible
+		byedpi
+		obsidian
+		k9s
+		dnsutils
+		nautilus
+		steam-run
+		brightnessctl
+  	bottom
+		prismlauncher
+    onlyoffice-desktopeditors
+	];
 
-  age.identityPaths = [
-    "/home/xm1k/.ssh/id_ed25519"
-  ];
-
-  age.secrets.password.file = ./secrets/password.age;
+	services.udev.extraRules = ''
+    SUBSYSTEM=="power_supply", KERNEL=="BAT*", \
+      RUN+="${pkgs.coreutils}/bin/chgrp battery_ctl /sys%p/charge_control_end_threshold", \
+      RUN+="${pkgs.coreutils}/bin/chmod g+w /sys%p/charge_control_end_threshold"
+  '';	
 
   environment.variables = {
-    MY_SECRET_FILE = config.age.secrets.password.path;
+		DISPLAY = ":0";
   };
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -154,29 +193,59 @@
   # Or disable the firewall altogether.
   networking.firewall.enable = false;
 
-  # Copy the NixOS configuration file and link it from the resulting system
-  # (/run/current-system/configuration.nix). This is useful in case you
-  # accidentally delete configuration.nix.
-  # system.copySystemConfiguration = true;
+	hardware = {
+		bluetooth = {
+			enable = true;
+			powerOnBoot = true;
+			settings = {
+				General = {
+					Enable = "Source,Sinc,Media,Socket";
+					Experimental = true;
+				};
+			};
+		};
+		graphics = {
+			enable = true;
+			extraPackages = with pkgs; [
+				intel-media-driver
+				libvdpau-va-gl
+			];
+		};
+	};
 
-  # This option defines the first version of NixOS you have installed on this particular machine,
-  # and is used to maintain compatibility with application data (e.g. databases) created on older NixOS versions.
-  #
-  # Most users should NEVER change this value after the initial install, for any reason,
-  # even if you've upgraded your system to a new NixOS release.
-  #
-  # This value does NOT affect the Nixpkgs version your packages and OS are pulled from,
-  # so changing it will NOT upgrade your system - see https://nixos.org/manual/nixos/stable/#sec-upgrading for how
-  # to actually do that.
-  #
-  # This value being lower than the current NixOS release does NOT mean your system is
-  # out of date, out of support, or vulnerable.
-  #
-  # Do NOT change this value unless you have manually inspected all the changes it would make to your configuration,
-  # and migrated your data accordingly.
-  #
-  # For more information, see `man configuration.nix` or https://nixos.org/manual/nixos/stable/options#opt-system.stateVersion .
+	services.pipewire = {
+		enable = true;
+		alsa.enable = true;
+		alsa.support32Bit = true;
+		pulse.enable = true;
+		jack.enable = true;
+		wireplumber.enable = true;
+	};
+	services.thermald.enable = true;
+
+	services.tlp = {
+		enable = true;
+		settings = {
+			GPU_SCALING_GOVERNOR_ON_AC = "performance";
+			GPU_SCALING_GOVERNOR_ON_BAT = "powersave";
+
+			PCIE_ASPM_ON_BAT = "powersupersave";
+			INTEL_GPU_MIN_FREQ_ON_BAT = 300;
+			INTEL_GPU_MAX_FREQ_ON_BAT = 800;
+			INTEL_GPU_BOOST_ON_BAT = 0;
+
+			CPU_ENERGY_PERF_POLICY_ON_AC = "performance";
+			CPU_ENERGY_PERF_POLICY_ON_BAT = "power";
+
+			CPU_BOOST_ON_AC = 1;
+			CPU_BOOST_ON_BAT = 0;
+		};
+	};
+
+	services.power-profiles-daemon.enable = false;
+
   system.stateVersion = "25.11"; # Did you read the comment?
 
 }
+
 

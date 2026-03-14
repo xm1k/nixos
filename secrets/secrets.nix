@@ -4,4 +4,7 @@ let
 in
 {
   "password.age".publicKeys = [ xm1k ];
+	"freeportpass.age".publicKeys = [ xm1k ];
+	"workpass.age".publicKeys = [ xm1k ];
+	"github_token.age".publicKeys = [ xm1k ];
 }

@@ -5,8 +5,9 @@
   
   programs.vscode = {
     enable = true;
-    extensions = pkgs.nix4vscode.forVscode [
-      "vscodevim.vim"
+    extensions = (with pkgs.vscode-extensions; [
+      continue.continue
+    	]) ++ pkgs.nix4vscode.forVscode [
     ];
   };
 }

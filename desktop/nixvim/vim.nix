@@ -24,13 +24,15 @@
       relativenumber = true;
       shiftwidth = 2;
       tabstop = 2;
+			expandtab = true;
       smartindent = true;
       termguicolors = true;
       cursorline = true;
-    };
+    };	
 
     plugins = {
-      lualine.enable = true;
+      	
+			lualine.enable = true;
 
       neo-tree.enable = true;
 

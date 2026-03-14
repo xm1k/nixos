@@ -2,8 +2,16 @@
   description = "My NixOS configuration with Home Manager";
 
   inputs = {
+    zen-browser.url = "github:0xc000022070/zen-browser-flake";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
-    home-manager = {
+		nur.url = "github:nix-community/NUR";
+
+		firefox-theme = {
+			url = "git+https://codeberg.org/da157/potatofox.git";
+			flake = false;
+		};
+
+		home-manager = {
       url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -37,6 +45,7 @@
             , noctalia-qs
             , agenix
             , nixvim
+						, nur
             , ...
             }@inputs:
 
@@ -60,8 +69,14 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
 
+					home-manager.extraSpecialArgs = { inherit inputs; };
+
           home-manager.users.xm1k = { pkgs, ... }: {
             home.stateVersion = "25.11";
+						imports = [
+              ./desktop/firefox/firefox.nix
+              ./tools/python.nix
+            ];
           };
         }
       ];

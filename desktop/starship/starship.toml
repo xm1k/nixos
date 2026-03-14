@@ -1,21 +1,82 @@
-format = """
-[ $username](bold green)@[ $hostname](bold green):[ $path](bold blue)❄️ $character
-"""
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = false
+
+format = "$username[❄️ ](text)$directory$git_branch$git_status(fg:green): "
+right_format = ""
+
+palette = 'catppuccin_macchiato'
+
+[palettes.catppuccin_macchiato]
+rosewater = "#f4dbd6"
+flamingo = "#f0c6c6"
+pink = "#f5bde6"
+mauve = "#c6a0f6"
+red = "#ed8796"
+maroon = "#ee99a0"
+peach = "#f5a97f"
+yellow = "#eed49f"
+green = "#a6da95"
+teal = "#8bd5ca"
+sky = "#91d7e3"
+sapphire = "#7dc4e4"
+blue = "#8aadf4"
+lavender = "#b7bdf8"
+text = "#cad3f5"
+subtext1 = "#b8c0e0"
+subtext0 = "#a5adcb"
+overlay2 = "#939ab7"
+overlay1 = "#8087a2"
+overlay0 = "#6e738d"
+surface2 = "#5b6078"
+surface1 = "#494d64"
+surface0 = "#363a4f"
+base = "#24273a"
+mantle = "#1e2030"
+crust = "#181926"
 
 [username]
-style_root = "bold red"
-style_user = "bold green"
 show_always = true
-
-[hostname]
-ssh_only = false
-style = "bold green"
+style_user = "sapphire"
+style_root = "mauve"
+format = '[ $user ]($style)'
 
 [directory]
-truncation_length = 3
+style = "sapphire"
+format = "[ $path ]($style)"
+truncation_length = 10
 truncation_symbol = "…/"
-style = "bold blue"
+truncate_to_repo = false
 
-[character]
-success_symbol = "[❄️](bold white) "
-error_symbol = "[❄️](bold red) "
+[git_branch]
+symbol = ""
+style = "bg:teal"
+format = '[[ $symbol $branch ](fg:base bg:green)]($style)'
+
+[git_status]
+style = "bg:teal"
+format = '[[($all_status$ahead_behind )](fg:base bg:green)]($style)'
+
+[status]
+disabled = false
+style = 'bg:surface0'
+failure_style = 'bg:surface0 fg:red'
+success_style = 'bg:surface0 fg:green'
+success_symbol = ""
+symbol = ""
+not_executable_symbol = ""
+not_found_symbol = ""
+sigint_symbol = ""
+signal_symbol = ""
+format = '[ $symbol $status ]($style)'
+
+[kubernetes]
+disabled = false
+style = "bg:surface0 fg:text"
+format = '[ $symbol$context( \($namespace\) )]($style)'
+
+[time]
+disabled = false
+time_format = "%Y-%m-%d %H:%M:%S"
+style = "bg:blue"
+format = '[[  $time ](fg:text bg:surface0)]($style)'

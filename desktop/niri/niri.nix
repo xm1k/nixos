@@ -2,19 +2,20 @@
 
 {
   environment.systemPackages = with pkgs; [
-    alacritty
-    fuzzel
-    waybar
-    mako
+		xwayland
+		xwayland-satellite
+		xorg.xhost
+		swww
   ];
 
   programs.niri.enable = true;
 
   home-manager.users.xm1k = {
-    home.file.".config/niri/config.kdl" = {
+    imports = [./cursor.nix];
+		home.file.".config/niri/config.kdl" = {
       source = ./config.kdl;
       force  = true;
     };
-  };
-
+  };	
+	
 }
