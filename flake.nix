@@ -38,17 +38,7 @@
     };
   };
 
-  outputs = { self
-            , nixpkgs
-            , home-manager
-            , noctalia
-            , noctalia-qs
-            , agenix
-            , nixvim
-						, nur
-            , ...
-            }@inputs:
-
+  outputs = { self, nixpkgs, home-manager, noctalia, noctalia-qs, agenix, nixvim, nur, ... }@inputs:
   let
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
@@ -65,21 +55,18 @@
         nixvim.nixosModules.nixvim
         ./desktop/noctalia/noctalia.nix
         agenix.nixosModules.default
+
+        # Home Manager configuration for user xm1k
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
 
 					home-manager.extraSpecialArgs = { inherit inputs; };
 
-          home-manager.users.xm1k = { pkgs, ... }: {
-            home.stateVersion = "25.11";
-						imports = [
-              ./desktop/firefox/firefox.nix
-              ./tools/python.nix
+          home-manager.users.xm1k = import ./hosts/nixos/home.nix;
+        }
             ];
           };
-        }
-      ];
     };
-  };
 }
+

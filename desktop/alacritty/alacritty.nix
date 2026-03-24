@@ -7,6 +7,7 @@
 		noto-fonts-color-emoji
 	];
 
+  # Fonts
 	fonts.fontconfig = {
 		enable = true;
 		defaultFonts = {
@@ -18,6 +19,7 @@
 		};
 	};
 
+  # Config for terminal
 	home.file.".config/fontconfig/fonts.conf" = {
 		source = ./fonts.conf;
 		force  = true;

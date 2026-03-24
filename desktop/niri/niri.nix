@@ -9,13 +9,5 @@
   ];
 
   programs.niri.enable = true;
-
-  home-manager.users.xm1k = {
-    imports = [./cursor.nix];
-		home.file.".config/niri/config.kdl" = {
-      source = ./config.kdl;
-      force  = true;
-    };
-  };	
-	
 }
+

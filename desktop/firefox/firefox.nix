@@ -46,24 +46,12 @@ in
         "intl.accept_languages" = "ru-RU, ru, en-US, en";
         "general.useragent.locale" = "ru-RU";
 
-        # Прокси
-        # "network.proxy.type" = 1;
-        # "network.proxy.http" = "10.1.252.242";
-        # "network.proxy.http_port" = 9999;
-        # "network.proxy.ssl" = "10.1.252.242";
-        # "network.proxy.ssl_port" = 9999; 
-        # "network.proxy.socks_remote_dns" = true;
-
         "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
 
-        # "browser.newtabpage.enabled" = false;
-        # "browser.topsites.controversial.enabled" = false;
-
-				"gfx.webrender.all" = true; # Принудительный аппаратный рендеринг (WebRender)
-				# 4. Убираем специфичные "фичи" Firefox, которые ломают верстку
+				"gfx.webrender.all" = true;
 				"gfx.font_rendering.cleartype_params.cleartype_level" = 100;
 				"gfx.font_rendering.cleartype_params.rendering_mode" = 5;
-				"gfx.font_rendering.directwrite.enabled" = true; # Если вдруг используется слой трансляции, но актуально для общей четкости
+				"gfx.font_rendering.directwrite.enabled" = true;
 				"layout.css.font-visibility.standard" = 3;
 
         "browser.aboutConfig.showWarning" = false;
@@ -86,8 +74,4 @@ in
     Version=2
   '';
 
-	# home.file.".mozilla/firefox/${profileName}/chrome" = {
-	#    source = "${inputs.firefox-theme}/chrome";
-	#    recursive = true;
-	#  };
 }
