@@ -9,10 +9,11 @@
 	security.pki.certificateFiles = [ "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
 
 	environment.variables = {
-			SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-			SSL_CERT_DIR = "${pkgs.cacert}/etc/ssl/certs";
-			NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-			NIXOS_OZONE_WL = "1";
+    SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+    SSL_CERT_DIR = "${pkgs.cacert}/etc/ssl/certs";
+    NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+    NIXOS_OZONE_WL = "1";
+    LIBVA_DRIVER_NAME = "iHD";
 	};
 
 	fonts.packages = with pkgs; [
@@ -22,16 +23,11 @@
   
   imports =
     [ # Include the results of the hardware scan.
-      ./games/core.nix
       ./hardware-configuration.nix
-      ./desktop/niri/niri.nix
-      ./desktop/nixvim/vim.nix
-			./tools/vscode.nix
-			./tools/work.nix
-      ./desktop/starship/starship.nix
-			./tools/podman/podman.nix
-			./secrets/secrets-manager.nix
-			./network/byedpi.nix
+      ./network.nix
+      ./screen.nix
+      ./games.nix
+			../../secrets/secrets-manager.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -170,6 +166,8 @@
 		DISPLAY = ":0";
   };
 
+  nixpkgs.overlays = [ inputs.nix4vscode.overlays.default ];
+
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
@@ -178,9 +176,11 @@
   #   enableSSHSupport = true;
   # };
 
-  # List services that you want to enable:
+  virtualisation.podman = {
+		enable = true;
+		dockerCompat = true;
+	};
 
-  # Enable the OpenSSH daemon.
   services.openssh.enable = true;
   services.openssh.settings = {
     PermitRootLogin = "yes";
@@ -192,6 +192,8 @@
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   networking.firewall.enable = false;
+
+  programs.gamemode.enable = true;
 
 	hardware = {
 		bluetooth = {
@@ -206,10 +208,15 @@
 		};
 		graphics = {
 			enable = true;
+      enable32Bit = true;
 			extraPackages = with pkgs; [
 				intel-media-driver
 				libvdpau-va-gl
 			];
+      extraPackages32 = with pkgs.pkgsi686Linux; [
+        intel-media-driver
+        libvdpau-va-gl
+      ];
 		};
 	};
 

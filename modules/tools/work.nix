@@ -25,7 +25,7 @@ let
   '';
 in
 {
-  environment.systemPackages = [
+  home.packages = [
     work-vpn
     pkgs.mailspring
   ];

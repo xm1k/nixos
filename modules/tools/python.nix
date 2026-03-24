@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 let
-  my-python = pkgs.python3.withPackages (ps: with ps; [
+  packages = pkgs.python3.withPackages (ps: with ps; [
     pyyaml
     pydantic
     markdown
@@ -13,6 +13,6 @@ let
 in
 {
   home.packages = [
-    my-python
+    packages
   ];
 }

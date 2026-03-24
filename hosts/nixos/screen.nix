@@ -4,19 +4,9 @@
 
 	services.dbus.enable = true;
 
-  hardware.graphics = {
-    enable = true;
-    extraPackages = with pkgs; [
-      intel-media-driver
-      libva
-    ];
-  };
+  programs.niri.enable = true;
 
   users.users.xm1k.extraGroups = [ "video" "render" ];
-
-  environment.sessionVariables = {
-    LIBVA_DRIVER_NAME = "iHD";
-  };	
 
   security.wrappers = {
     gpu-screen-recorder = {

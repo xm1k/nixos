@@ -1,5 +1,5 @@
 {
-  description = "My NixOS configuration with Home Manager";
+  description = "Flake";
 
   inputs = {
 
@@ -64,24 +64,16 @@
 
       modules = [
         disko.nixosModules.disko
-        ./disko-config.nix
-        ./configuration.nix
+        ./hosts/nixos/disko-config.nix
+        ./hosts/nixos/configuration.nix
         home-manager.nixosModules.home-manager
-        nixvim.nixosModules.nixvim
-        ./desktop/noctalia/noctalia.nix
         agenix.nixosModules.default
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-
 					home-manager.extraSpecialArgs = { inherit inputs; };
-
-          home-manager.users.xm1k = { pkgs, ... }: {
-            home.stateVersion = "25.11";
-						imports = [
-              ./home/home.nix
-            ];
-          };
+          home-manager.backupFileExtension = "backup";
+          home-manager.users.xm1k = import ./modules/home.nix;
         }
       ];
     };
