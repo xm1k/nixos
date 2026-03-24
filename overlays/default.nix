@@ -1,0 +1,4 @@
+{ nur, ... }:
+[
+  nur.overlay
+]

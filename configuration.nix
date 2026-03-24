@@ -5,33 +5,21 @@
 { config, lib, pkgs, inputs, ... }:
 
 {	
-
-	security.pki.certificateFiles = [ "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
-
-	environment.variables = {
-			SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-			SSL_CERT_DIR = "${pkgs.cacert}/etc/ssl/certs";
-			NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-			NIXOS_OZONE_WL = "1";
-	};
-
-	fonts.packages = with pkgs; [
-    nerd-fonts.jetbrains-mono
-    nerd-fonts.fira-code
-  ];
-  
-  imports =
-    [ # Include the results of the hardware scan.
-      ./games/core.nix
+  imports = [
+    # Include the results of the hardware scan.
       ./hardware-configuration.nix
-      ./desktop/niri/niri.nix
-      ./desktop/nixvim/vim.nix
-			./tools/vscode.nix
-			./tools/work.nix
-      ./desktop/starship/starship.nix
-			./tools/podman/podman.nix
-			./secrets/secrets-manager.nix
-			./network/byedpi.nix
+    ./modules/system/network.nix
+    ./modules/system/hardware.nix
+    ./modules/system/services.nix
+    ./modules/desktop/niri/niri.nix
+    ./modules/desktop/nixvim/vim.nix
+    ./modules/tools/vscode.nix
+    ./modules/tools/work.nix
+    ./modules/desktop/starship/starship.nix
+    ./modules/tools/podman/podman.nix
+    ./modules/secrets/secrets-manager.nix
+    ./modules/network/byedpi.nix
+    ./modules/games/core.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -46,7 +34,7 @@
 		fallbackDns = [ "1.1.1.1" "8.8.8.8" ];
 	};
 
-  networking= {
+  networking = {
     extraHosts = ''
       192.168.31.63 b.net
     '';
@@ -59,10 +47,6 @@
 
   # Set your time zone.
   time.timeZone = "Europe/Moscow";
-
-  # Configure network proxy if necessary
-  # networking.proxy.default = "http://user:password@proxy:port/";
-  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
   # Select internationalisation properties.
   # i18n.defaultLocale = "en_US.UTF-8";
@@ -86,7 +70,6 @@
     extra-sandbox-paths = [];
     max-jobs = 4;
   };
-
 
   # Configure keymap in X11
   # services.xserver.xkb.layout = "us";
@@ -245,7 +228,5 @@
 	services.power-profiles-daemon.enable = false;
 
   system.stateVersion = "25.11"; # Did you read the comment?
-
 }
-
 
