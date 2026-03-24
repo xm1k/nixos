@@ -60,13 +60,17 @@
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-
 					home-manager.extraSpecialArgs = { inherit inputs; };
 
-          home-manager.users.xm1k = import ./hosts/nixos/home.nix;
-        }
+          home-manager.users.xm1k = {
+            imports = [
+              ./hosts/nixos/home.nix
+              ./hosts/nixos/home-manager/niri.nix
             ];
           };
+}
+      ];
     };
+  };
 }
 
