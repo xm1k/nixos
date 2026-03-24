@@ -2,6 +2,10 @@
   description = "My NixOS configuration with Home Manager";
 
   inputs = {
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
 		nur.url = "github:nix-community/NUR";
@@ -46,6 +50,7 @@
             , agenix
             , nixvim
 						, nur
+            , disko
             , ...
             }@inputs:
 
@@ -60,6 +65,8 @@
       specialArgs = { inherit inputs; };
 
       modules = [
+        disko.nixosModules.disko
+        ./disko-config.nix
         ./configuration.nix
         home-manager.nixosModules.home-manager
         nixvim.nixosModules.nixvim
