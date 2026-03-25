@@ -2,7 +2,7 @@
   disko.devices = {
     disk = {
       nyx-storage = {
-        device = "/dev/nvme0n1";
+        device = "/dev/sdb";
         type = "disk";
         content = {
           type = "gpt";
