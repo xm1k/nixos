@@ -8,7 +8,7 @@
       ./screen.nix
     ];
 
-  networking.hostName = "matebook16";
+  networking.hostName = "desktop";
 
 }
 
