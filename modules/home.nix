@@ -2,7 +2,7 @@
 { config, pkgs, inputs, lib, ... }:
 
 {
-  xresources.properties = lib.mkForce {};
+  # xresources.properties = lib.mkForce {};
   home.pointerCursor = {
     x11.enable = false;
     gtk.enable = true;
