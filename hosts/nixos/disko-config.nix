@@ -2,7 +2,7 @@
   disko.devices = {
     disk = {
       nyx-storage = {
-        device = "/dev/sda";
+        device = "/dev/disk/by-id/ata-ST1000DM010-2EP102_ZN1ACNBV";
         type = "disk";
         content = {
           type = "gpt";
