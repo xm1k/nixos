@@ -1,1 +1,1 @@
-sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- --mode disko ./disko-conf.nix
+sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- --mode disko ./disko-config.nix
