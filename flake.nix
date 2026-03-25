@@ -74,6 +74,7 @@
 					home-manager.extraSpecialArgs = { inherit inputs; };
           home-manager.backupFileExtension = "backup";
           home-manager.users.xm1k = import ./modules/home.nix;
+          home-manager.users.root = import ./modules/home-root.nix;
         }
       ];
     };
