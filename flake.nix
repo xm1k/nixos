@@ -81,9 +81,8 @@
   in
   {
     nixosConfigurations = {
-      nixos = mkHost "nixos";
-      laptop = mkHost "laptop"; 
-      workstation = mkHost "workstation";
+      matebook16 = mkHost "matebook16";
+      desktop = mkHost "desktop";
     };
   };
 }

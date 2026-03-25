@@ -1,4 +1,3 @@
-
 { config, lib, pkgs, inputs, ... }:
 
 {	
@@ -8,6 +7,8 @@
       ./hardware-configuration.nix
       ./screen.nix
     ];
+
+  networking.hostName = "matebook16";
 
 }
 
