@@ -2,7 +2,7 @@
   disko.devices = {
     disk = {
       nyx-storage = {
-        device = "/dev/disk/by-id/ata-TOSHIBA_HDWD110_21G0ZGJNS;
+        device = "/dev/disk/by-id/ata-TOSHIBA_HDWD110_21G0ZGJNS";
         type = "disk";
         content = {
           type = "gpt";
