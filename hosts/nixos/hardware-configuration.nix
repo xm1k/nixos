@@ -4,9 +4,69 @@
 { config, lib, pkgs, modulesPath, ... }:
 
 {
-  imports =
-    [ (modulesPath + "/installer/scan/not-detected.nix")
-    ];
+
+  users.groups.battery_ctl = {};
+
+  services.udev.extraRules = ''
+    SUBSYSTEM=="power_supply", KERNEL=="BAT*", \
+    RUN+="${pkgs.coreutils}/bin/chgrp battery_ctl /sys%p/charge_control_end_threshold", \
+    RUN+="${pkgs.coreutils}/bin/chmod g+w /sys%p/charge_control_end_threshold"
+  '';	
+
+  services.thermald.enable = true;
+  services.power-profiles-daemon.enable = false;
+
+  services.tlp = {
+		enable = true;
+		settings = {
+			GPU_SCALING_GOVERNOR_ON_AC = "performance";
+			GPU_SCALING_GOVERNOR_ON_BAT = "powersave";
+
+			PCIE_ASPM_ON_BAT = "powersupersave";
+			INTEL_GPU_MIN_FREQ_ON_BAT = 300;
+			INTEL_GPU_MAX_FREQ_ON_BAT = 800;
+			INTEL_GPU_BOOST_ON_BAT = 0;
+
+			CPU_ENERGY_PERF_POLICY_ON_AC = "performance";
+			CPU_ENERGY_PERF_POLICY_ON_BAT = "power";
+
+			CPU_BOOST_ON_AC = 1;
+			CPU_BOOST_ON_BAT = 0;
+		};
+	};
+
+  environment.variables = {
+    LIBVA_DRIVER_NAME = "iHD";
+  };
+
+  hardware = {
+		bluetooth = {
+			enable = true;
+			powerOnBoot = true;
+			settings = {
+				General = {
+					Enable = "Source,Sinc,Media,Socket";
+					Experimental = true;
+				};
+			};
+		};
+		graphics = {
+			enable = true;
+      enable32Bit = true;
+			extraPackages = with pkgs; [
+				intel-media-driver
+				libvdpau-va-gl
+			];
+      extraPackages32 = with pkgs.pkgsi686Linux; [
+        intel-media-driver
+        libvdpau-va-gl
+      ];
+		};
+	};
+
+  imports = [ 
+    (modulesPath + "/installer/scan/not-detected.nix")
+  ];
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "nvme" "usb_storage" "usbhid" "sd_mod" ];
   boot.initrd.kernelModules = [ ];

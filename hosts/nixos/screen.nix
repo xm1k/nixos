@@ -2,10 +2,6 @@
 
 {
 
-	services.dbus.enable = true;
-
-  programs.niri.enable = true;
-
   users.users.xm1k.extraGroups = [ "video" "render" ];
 
   security.wrappers = {

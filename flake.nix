@@ -55,28 +55,35 @@
   let
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
+    sharedModules = [
+      disko.nixosModules.disko
+      home-manager.nixosModules.home-manager
+      agenix.nixosModules.default
+      {
+        home-manager.useGlobalPkgs = true;
+        home-manager.useUserPackages = true;
+        home-manager.extraSpecialArgs = { inherit inputs; };
+        home-manager.backupFileExtension = "backup";
+        home-manager.users.xm1k = import ./modules/home.nix;
+        home-manager.users.root = import ./modules/home-root.nix;
+      }
+    ];
+
+    mkHost = hostName: nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = { inherit inputs; };
+      modules = sharedModules ++ [
+        ./hosts/default/configuration.nix
+        ./hosts/${hostName}/configuration.nix
+        ./hosts/${hostName}/disko-config.nix
+      ];
+    };
   in
   {
-    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
-      inherit system;
-
-      specialArgs = { inherit inputs; };
-
-      modules = [
-        disko.nixosModules.disko
-        ./hosts/nixos/disko-config.nix
-        ./hosts/nixos/configuration.nix
-        home-manager.nixosModules.home-manager
-        agenix.nixosModules.default
-        {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-					home-manager.extraSpecialArgs = { inherit inputs; };
-          home-manager.backupFileExtension = "backup";
-          home-manager.users.xm1k = import ./modules/home.nix;
-          home-manager.users.root = import ./modules/home-root.nix;
-        }
-      ];
+    nixosConfigurations = {
+      nixos = mkHost "nixos";
+      laptop = mkHost "laptop"; 
+      workstation = mkHost "workstation";
     };
   };
 }
