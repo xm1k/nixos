@@ -31,7 +31,9 @@
     };	
 
     plugins = {
-      	
+
+      trouble.enable = true;
+
 			lualine.enable = true;
 
       neo-tree.enable = true;
@@ -74,6 +76,13 @@
     };
 
     keymaps = [
+      {
+        mode = "n";
+        key = "<leader>t";
+        action = "<cmd>Trouble diagnostics toggle<CR>";
+        options.silent = true;
+        options.desc = "Toggle Trouble Diagnostics";
+      }
       {
         mode = "n";
         key = "<leader>e";
