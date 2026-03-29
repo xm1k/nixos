@@ -13,6 +13,7 @@
   imports = [
     ./desktop/firefox/firefox.nix
     ./tools/python.nix
+    ./tools/iceberg/iceberg.nix
     ./desktop/niri/niri.nix
     ./desktop/nixvim/vim.nix
     ./tools/vscode.nix

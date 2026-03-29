@@ -52,7 +52,8 @@
         enable = true;
         servers = {
           nil_ls.enable = true;
-          pyright.enable = true;
+          pyright.enable = false;
+          jedi_language_server.enable = true;
           ts_ls.enable = true;
         };
       };
