@@ -17,6 +17,8 @@
 
 
   environment.systemPackages = with pkgs; [
+    podman-compose
+    wine
     vivaldi
     wget
     curl
@@ -24,7 +26,6 @@
     python310
     docker
 		wl-clipboard
-		fastfetch
 		unzip
 		unrar
 		mpv
@@ -32,6 +33,10 @@
 		byedpi
 		obsidian
 		k9s
+    kubectl
+    kubernetes-helm
+    cilium-cli
+    gum
 		dnsutils
 		nautilus
 		steam-run
@@ -39,11 +44,35 @@
   	bottom
 		prismlauncher
     onlyoffice-desktopeditors
+
+    neo # neo-matrix
+    hollywood
+    lavat
+    peaclock
+    ticker
+    mapscii
+    tenki
+    cbonsai
+    pipes-rs
+		fastfetch
+    hyfetch
+    onefetch
+    cpufetch
+    cava
+    btop
+    gtop
+    cool-retro-term
+    toilet
+    figlet
+    lolcat
 	];
 
 	
 
-	security.pki.certificateFiles = [ "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
+	security.pki.certificateFiles = [ 
+    "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+    ./certs/work.crt
+  ];
 
 	environment.variables = {
     SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
@@ -148,9 +177,19 @@
 
   nixpkgs.overlays = [ inputs.nix4vscode.overlays.default ];
 
-  virtualisation.podman = {
-		enable = true;
-		dockerCompat = true;
+  virtualisation = {
+    containers.enable = true;
+
+    containers.containersConf.settings = {
+      containers = {
+        log_driver = "journald";
+      };
+    };
+
+		podman = {
+      enable = true;
+		  dockerCompat = true;
+    };
 	};
 
   services.openssh.enable = true;

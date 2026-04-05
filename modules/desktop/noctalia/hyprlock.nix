@@ -10,17 +10,17 @@
         after_sleep_cmd = "hyprctl dispatch dpms on";
       };
 
-      listener = [
-        {
-          timeout = 300; # 5 минут
-          on-timeout = "loginctl lock-session";
-        }
-        {
-          timeout = 600; # 10 минут
-          on-timeout = "niri msg action power-off-monitors";
-          on-resume = "niri msg action power-on-monitors";
-        }
-      ];
+    #   listener = [
+    #     {
+    #       timeout = 300; # 5 минут
+    #       on-timeout = "loginctl lock-session";
+    #     }
+    #     {
+    #       timeout = 600; # 10 минут
+    #       on-timeout = "niri msg action power-off-monitors";
+    #       on-resume = "niri msg action power-on-monitors";
+    #     }
+    #   ];
     };
   };
 
@@ -72,7 +72,7 @@
           valign = "center";
         }
         {
-          text = "Hi, $USER";
+          text = "Hello";
           color = "rgb(143, 188, 187)";
           font_size = 25;
           font_family = "JetBrainsMono Nerd Font";
