@@ -24,7 +24,6 @@
     python310
     docker
 		wl-clipboard
-		fastfetch
 		unzip
 		unrar
 		mpv
@@ -32,6 +31,10 @@
 		byedpi
 		obsidian
 		k9s
+    kubectl
+    kubernetes-helm
+    cilium-cli
+    gum
 		dnsutils
 		nautilus
 		steam-run
@@ -39,6 +42,27 @@
   	bottom
 		prismlauncher
     onlyoffice-desktopeditors
+
+    neo # neo-matrix
+    hollywood
+    lavat
+    peaclock
+    ticker
+    mapscii
+    tenki
+    cbonsai
+    pipes-rs
+		fastfetch
+    hyfetch
+    onefetch
+    cpufetch
+    cava
+    btop
+    gtop
+    cool-retro-term
+    toilet
+    figlet
+    lolcat
 	];
 
 	

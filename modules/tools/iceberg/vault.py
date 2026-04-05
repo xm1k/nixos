@@ -13,12 +13,19 @@ class GitManager():
             self.repo = git.Repo.init(repo, initial_branch='1.0')
             self.commit(0)
 
+    def get_branch(self):
+        if self.repo.head.is_detached:
+            self.repo.git.checkout('-b', f"1.{len(self.repo.heads)}")
+        return self.repo.active_branch.name
+
     def commit(self, grade: int):
         self.repo.index.add(["*"])
-        try: 
-            version = self.repo.head.commit.message.split('.')
-            if grade: version[-grade] = str(int(version[-grade]) + 1)
-            version = '.'.join(version)
+        try:
+            if self.repo.head.is_detached:
+                self.repo.git.checkout('-b', f"1.${self.repo.heads}")
+            branch = self.repo.active_branch.name
+            minor = self.repo.head.commit.message.split('.')[2]
+            version = branch + '.' + str(int(minor) + grade)
         except: version = '1.0.0'
 
         self.repo.index.commit(version)
@@ -28,21 +35,15 @@ class GitManager():
         self.repo.git.checkout(target)
 
     def show_tree(self):
-        """Выводит в консоль визуальное дерево коммитов и веток."""
-        # Используем встроенный git log через GitPython
-        # %h - сокращенный хэш, %d - декорации (ветки, теги), %s - сообщение, %cr - дата
-        format_str = '%C(magenta)%d%C(reset) %s %C(cyan)(%cr)%C(reset)'
+        format_str = '%C(cyan)%s'
         
         tree_output = self.repo.git.log(
             '--graph', 
             '--all', 
             '--color=always',
-            f'--format={format_str}',
-            '--abbrev-commit'
+            f'--format={format_str}'
         )
-        print("\n--- Git Tree Hierarchy ---")
-        print(tree_output)
-        print("--------------------------\n")
+        print(f"\n\n{tree_output}\n\n")
 
 class VaultManager():
     def __init__(self, path: str):
@@ -107,10 +108,11 @@ class VaultManager():
 def main():
     vault_mgr = VaultManager('/home/xm1k/Iceberg2')
 
+    vault_mgr.git_mgr.get_branch()
+
     commands = {
         "save":  lambda *args: vault_mgr.save(),
         "patch": lambda *args: vault_mgr.patch(),
-        "last": lambda *args: vault_mgr.git_mgr.go_head(),
         "go":  lambda *args: vault_mgr.git_mgr.go_to(*args),
         "tree": lambda *args: vault_mgr.git_mgr.show_tree()
     }

@@ -9,10 +9,21 @@
   };
 
   home.stateVersion = "25.11";
-  
+
+  home.sessionVariables = {
+    GTK_CSD = "0";
+    
+    _JAVA_AWT_WM_NONREPARENTING = "1";
+    
+    QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
+    
+    QT_QPA_PLATFORM = "wayland;xcb"; 
+  };
+
   imports = [
     ./desktop/firefox/firefox.nix
     ./tools/python.nix
+    ./tools/k8s.nix
     ./tools/iceberg/iceberg.nix
     ./desktop/niri/niri.nix
     ./desktop/nixvim/vim.nix
