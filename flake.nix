@@ -84,6 +84,7 @@
       matebook16 = mkHost "matebook16";
       desktop = mkHost "desktop";
       thinkpad = mkHost "thinkpad";
+      server = mkHost "server";
     };
   };
 }
