@@ -65,6 +65,10 @@
     toilet
     figlet
     lolcat
+
+    # work
+    openldap
+    apache-directory-studio
 	];
 
 	
