@@ -17,6 +17,7 @@
 
 
   environment.systemPackages = with pkgs; [
+    appimage-run
     podman-compose
     wine
     vivaldi
@@ -24,7 +25,6 @@
     curl
     git
     python310
-    docker
 		wl-clipboard
 		unzip
 		unrar
@@ -118,7 +118,7 @@
 	# RAM managing
 	boot.tmp.useTmpfs = true;
 	boot.tmp.tmpfsSize = "50%"; # выделяем до половины ОЗУ под /tmp
-	services.psd.enable = true;
+  services.psd.enable = true;
 
   nix.settings = {
     show-trace = true;

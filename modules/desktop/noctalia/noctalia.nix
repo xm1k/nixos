@@ -1,11 +1,10 @@
 { pkgs, inputs, ... }:
 
 {
-
   home.packages = with pkgs; [
     kdePackages.kdeconnect-kde
     kdePackages.qttools
-		evtest
+    evtest
     grim
     slurp
     tesseract
@@ -19,8 +18,8 @@
     yt-dlp
   ];
 
-	services.cliphist.enable = true;
-	services.kdeconnect.enable = true;
+  services.cliphist.enable = true;
+  services.kdeconnect.enable = true;
 
   imports = [
     inputs.noctalia.homeModules.default
@@ -32,97 +31,101 @@
     text = builtins.toJSON {
       defaultWallpaper = "/etc/nixos/modules/desktop/niri/wallpaper.png";
     };
-  };	
+  };    
 
-  programs.noctalia-shell = {
-    enable = true;	
+  programs.noctalia = {
+    enable = true;    
+    package = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    settings = {    
+      plugins = {
+        sources = [
+          {
+            enabled = true;
+            name    = "Official Noctalia Plugins";
+            url     = "https://github.com/noctalia-dev/noctalia-plugins";
+          }
+        ];
 
-    plugins = {
-      sources = [
-        {
-          enabled = true;
-          name    = "Official Noctalia Plugins";
-          url     = "https://github.com/noctalia-dev/noctalia-plugins";
-        }
-      ];
+        states = {
+          "timer" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
 
-      states = {
-        
-        "timer" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          "todo" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+          "kde-connect" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+          "translator" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+          "battery-threshold" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+          "screen-recorder" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+            settings = {
+              videoSource = "screen";
+            };
+          };    
+
+          "polkit-agent" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+          "show-keys" = {
+            enabled   = false;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+            settings = {
+              evtestDevice = "/dev/input/event0";
+            };
+          };
+
+          "assistant-panel" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+          "screen-toolkit" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+          "custom-sticker" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+          "music-search" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+          "keybind-cheatsheet" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+
+          "clipper" = {
+            enabled   = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
         };
-
-        "todo" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "kde-connect" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "translator" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "battery-threshold" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "screen-recorder" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };	
-
-        "polkit-agent" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "show-keys" = {
-          enabled   = false;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "assistant-panel" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "screen-toolkit" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "custom-sticker" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "music-search" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "keybind-cheatsheet" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
-        "clipper" = {
-          enabled   = true;
-          sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-        };
-
       };
-      
-    };
 
-    settings = {	
+      # Остальные глобальные настройки интерфейса
       general = {
         enableShadows = false;
         iRadiusRatio = 0.44;
@@ -143,7 +146,6 @@
         transitionType = [
           "honeycomb"
         ];
-
       };
       bar = {
         density = "comfortable";
@@ -183,14 +185,5 @@
         };
       };
     };
-    pluginSettings = {
-      show-keys = {
-        evtestDevice = "/dev/input/event0";
-      };
-      screen-recorder = {
-        videoSource = "screen";
-      };
-    };
   };
 }
-
