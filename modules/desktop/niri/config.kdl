@@ -268,7 +268,7 @@ layout {
 // See the binds section below for more spawn examples.
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
-spawn-at-startup "noctalia-shell"
+spawn-at-startup "noctalia"
 spawn-at-startup "hyprlock"
 
 // To run a shell command (with variables, pipes, etc.), use spawn-sh-at-startup:
@@ -353,7 +353,7 @@ binds {
 
     // Suggested binds for running programs: terminal, app launcher, screen locker.
     Alt+W hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
-    Mod+W hotkey-overlay-title="Noctalia Launcher" { spawn-sh "noctalia-shell ipc call launcher toggle"; }
+    Mod+W hotkey-overlay-title="Noctalia Launcher" { spawn-sh "noctalia msg panel-open launcher"; }
     Ctrl+Alt+L hotkey-overlay-title="Lock the Screen: hyprlock" { spawn "hyprlock"; }
 
     // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.

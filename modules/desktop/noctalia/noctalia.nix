@@ -146,6 +146,9 @@
         transitionType = [
           "honeycomb"
         ];
+        default = {
+          path = "/etc/nixos/modules/desktop/niri/wallpaper.png";
+        };
       };
       bar = {
         density = "comfortable";
@@ -169,13 +172,6 @@
           ];
           right = [
             {id = "Volume";}
-            {
-              id = "KeyboardLayout";
-              displayMode = "forceOpen";
-              iconColor = "none";
-              showIcon = false;
-              textColor = "none";
-            }
             {id = "Network";}
             {id = "Bluetooth";}
             {id = "Clock";}
