@@ -22,7 +22,7 @@
 
 	services.resolved = {
 		enable = true;
-		fallbackDns = [ "1.1.1.1" "8.8.8.8" ];
+		fallbackDns = [ "77.88.8.8" "1.1.1.1" "8.8.8.8" ];
 	};
 
   networking= {

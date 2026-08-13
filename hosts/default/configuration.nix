@@ -44,6 +44,7 @@
   	bottom
 		prismlauncher
     onlyoffice-desktopeditors
+    android-studio
 
     neo # neo-matrix
     hollywood
