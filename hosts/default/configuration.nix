@@ -17,6 +17,14 @@
 
 
   environment.systemPackages = with pkgs; [
+    claude-code
+    ripgrep
+    bubblewrap socat
+    nodejs
+    uv
+    gh
+
+    openscad
     appimage-run
     podman-compose
     wine

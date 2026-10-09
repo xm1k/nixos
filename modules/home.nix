@@ -30,6 +30,7 @@
     ./desktop/nixvim/vim.nix
     ./tools/vscode.nix
 		./tools/work.nix
+    ./tools/commands.nix
     ./desktop/starship/starship.nix
     ./desktop/noctalia/noctalia.nix
 		./tools/podman/podman.nix
