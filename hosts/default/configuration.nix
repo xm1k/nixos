@@ -11,7 +11,8 @@
       ./network.nix
       ./screen.nix
       ./games.nix
-			../../secrets/secrets-manager.nix
+      ../../secrets/secrets-manager.nix
+      ../../modules/tools/bambu.nix
     ];
 
 
@@ -23,6 +24,7 @@
     nodejs
     uv
     gh
+    orca-slicer
 
     openscad
     appimage-run
@@ -185,7 +187,7 @@
   # You can use https://search.nixos.org/ to find more packages (and options).
 
   environment.variables = {
-		DISPLAY = ":0";
+		DISPLAY = ":1";
   };
 
   nixpkgs.overlays = [ inputs.nix4vscode.overlays.default ];
@@ -211,7 +213,15 @@
     PasswordAuthentication = true;
   };
 
-  programs.gamemode.enable = true;	
+  programs.gamemode.enable = true;
+
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    stdenv.cc.cc  # libstdc++.so.6
+    zlib          # libz.so.1
+    openssl
+    curl
+  ];
 
 	services.pipewire = {
 		enable = true;
