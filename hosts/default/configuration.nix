@@ -13,6 +13,7 @@
       ./games.nix
       ../../secrets/secrets-manager.nix
       ../../modules/tools/bambu.nix
+      ../../modules/tools/ngate-container.nix
     ];
 
 

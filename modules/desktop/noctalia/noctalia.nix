@@ -27,12 +27,6 @@
     ./hyprlock.nix
   ];
 
-  home.file.".cache/noctalia/wallpapers.json" = {
-    text = builtins.toJSON {
-      defaultWallpaper = "/etc/nixos/modules/desktop/niri/wallpaper.png";
-    };
-  };    
-
   programs.noctalia = {
     enable = true;
     package = inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default;
@@ -51,9 +45,10 @@
       notification.enable_daemon = false;
 
       wallpaper = {
-        enabled   = true;
-        directory = "/etc/nixos/modules/desktop/niri";
-        transition = [ "honeycomb" ];
+        enabled        = true;
+        directory      = "/etc/nixos/modules/desktop/niri";
+        transitionType = [ "honeycomb" ];
+        default.path   = "/etc/nixos/modules/desktop/niri/wallpaper.png";
       };
 
       bar.widgets = {

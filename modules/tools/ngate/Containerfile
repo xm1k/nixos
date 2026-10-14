@@ -1,0 +1,73 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Moscow
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    avahi-daemon \
+    bc \
+    bind9-host \
+    ca-certificates \
+    curl \
+    dbus \
+    dialog \
+    findutils \
+    fontconfig \
+    fonts-dejavu-core \
+    gnupg2 \
+    iproute2 \
+    iputils-ping \
+    keyutils \
+    language-pack-en \
+    less \
+    locales \
+    lsof \
+    mesa-vulkan-drivers \
+    mtr \
+    ncurses-bin \
+    openssh-client \
+    openssl \
+    pigz \
+    procps \
+    python3 \
+    rsync \
+    sed \
+    sudo \
+    tar \
+    tcpdump \
+    time \
+    traceroute \
+    tree \
+    tzdata \
+    unzip \
+    wget \
+    xauth \
+    xdg-user-dirs \
+    zip \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=cprocsp . /tmp/debs/
+RUN dpkg -i /tmp/debs/lsb-cprocsp-base_*.deb \
+    && dpkg -i /tmp/debs/lsb-cprocsp-rdr-64_*.deb \
+    && dpkg -i /tmp/debs/lsb-cprocsp-kc1-64_*.deb \
+    && dpkg -i /tmp/debs/lsb-cprocsp-capilite-64_*.deb \
+    && dpkg -i /tmp/debs/cprocsp-curl-64_*.deb \
+    && dpkg -i --force-depends /tmp/debs/lsb-cprocsp-ca-certs_*.deb \
+    && rm -rf /tmp/debs
+
+RUN REPO="https://ng-client.cryptopro.ru/repository/debian/amd64_snapshot" \
+    && mkdir -p /tmp/ngdebs \
+    && wget -q "$REPO/Packages.gz" -O- | zcat > /tmp/ngdebs/Packages \
+    && for pkg in cprongate-tun cprongate-console; do \
+         fname=$(grep -A10 "^Package: ${pkg}$" /tmp/ngdebs/Packages \
+                 | grep "^Filename:" | head -1 | awk '{print $2}'); \
+         wget -q -P /tmp/ngdebs "$REPO/${fname#./}"; \
+       done \
+    && dpkg --force-depends -i /tmp/ngdebs/cprongate-tun_*.deb /tmp/ngdebs/cprongate-console_*.deb \
+    && rm -rf /tmp/ngdebs
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/sleep", "infinity"]
