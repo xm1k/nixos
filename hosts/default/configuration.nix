@@ -165,6 +165,8 @@
     initialPassword = "password";
   };
 
+  security.sudo.wheelNeedsPassword = false;
+
   services.xserver = {
     enable = true;
     xkb = {

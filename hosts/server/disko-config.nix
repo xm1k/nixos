@@ -22,7 +22,6 @@
               size = "4G";
               content = {
                 type = "swap";
-                resumeDevice = true;
               };
             };
 
