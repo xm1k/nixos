@@ -38,6 +38,12 @@
 			group = "users";
 			mode = "0400";
 		};
+		"tailscale_authkey" = {
+			file = ./tailscale_authkey.age;
+			owner = "xm1k";
+			group = "users";
+			mode = "0400";
+		};
   };
 
   environment.systemPackages = [
@@ -46,9 +52,11 @@
 
 	environment.extraInit = "
 		export FREE_PORT_PASS=$(cat ${config.age.secrets.freeportpass.path} 2>/dev/null)
-		export GH_TOKEN=$(cat ${config.age.secrets.github_token.path} 2>/dev/null)	
+		export GH_TOKEN=$(cat ${config.age.secrets.github_token.path} 2>/dev/null)
 		export WORK_PASS=$(cat ${config.age.secrets.workpass.path} 2>/dev/null)
-    export SSH_PASS=$(cat ${config.age.secrets.password.path} 2>/dev/null)
-    export GITLAB_TOKEN=$(cat ${config.age.secrets.gitlab_token.path} 2>/dev/null)
+		export SSH_PASS=$(cat ${config.age.secrets.password.path} 2>/dev/null)
+		export GITLAB_TOKEN=$(cat ${config.age.secrets.gitlab_token.path} 2>/dev/null)
+		export TS_AUTHKEY=$(cat ${config.age.secrets.tailscale_authkey.path} 2>/dev/null)
+		export DEPLOY_USER=xm1k
 	";
 }

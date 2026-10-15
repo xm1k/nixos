@@ -8,4 +8,5 @@ in
 	"workpass.age".publicKeys = [ xm1k ];
 	"github_token.age".publicKeys = [ xm1k ];
 	"gitlab_token.age".publicKeys = [ xm1k ];
+	"tailscale_authkey.age".publicKeys = [ xm1k ];
 }
