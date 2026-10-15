@@ -19,7 +19,22 @@
 
 
   environment.systemPackages = with pkgs; [
-    claude-code
+    (pkgs.writeShellScriptBin "claude" ''
+      export http_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
+      export HTTPS_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
+      export ALL_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
+      export all_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
+      echo "proxying..."
+      exec ${pkgs.claude-code}/bin/claude "$@"
+    '')
+    (pkgs.writeShellScriptBin "telegram" ''
+      export http_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
+      export HTTPS_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
+      export ALL_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
+      export all_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
+      echo "proxying..."
+      setsid ${pkgs.telegram-desktop}/bin/Telegram "$@" > /dev/null 2>&1 &
+    '')
     ripgrep
     bubblewrap socat
     nodejs
