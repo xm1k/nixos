@@ -20,22 +20,25 @@
 		};
 	};
 
-	services.resolved = {
-		enable = true;
-		fallbackDns = [ "77.88.8.8" "1.1.1.1" "8.8.8.8" ];
-	};
+	services.resolved.enable = false;
 
-  networking= {
-    extraHosts = ''
-      192.168.31.63 b.net
-    '';
-		networkmanager = {
-			enable = true;
-			dns = "systemd-resolved";
-		};
-		nameservers = [ "1.1.1.1" "8.8.8.8" ];
-	};
- 
+  networking = {
+    extraHosts = "";
+    networkmanager = {
+      enable = true;
+      dns = "dnsmasq";
+    };
+  };
+
+  environment.etc."NetworkManager/dnsmasq.d/b-net.conf".text = ''
+    address=/b.net/192.168.31.63
+    server=77.88.8.8
+    server=1.1.1.1
+    server=8.8.8.8
+    server=/nn.gw.yadro.com/8.8.8.8
+    server=/yadro.com/172.31.129.43
+  '';
+
   networking.firewall.enable = false;
 
   services.tailscale.enable = true;

@@ -28,9 +28,6 @@ let
       exit 1
     fi
 
-    sudo resolvectl dns tun0 172.31.129.43
-    sudo resolvectl domain tun0 "~yadro.com"
-
     pkill quickshell || true
 
     export HTTPS_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
