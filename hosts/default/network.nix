@@ -32,6 +32,8 @@
 
   environment.etc."NetworkManager/dnsmasq.d/b-net.conf".text = ''
     address=/b.net/192.168.31.63
+    address=/s.net/194.169.160.248
+    server=172.17.2.11
     server=77.88.8.8
     server=1.1.1.1
     server=8.8.8.8

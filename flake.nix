@@ -13,6 +13,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
 		nur.url = "github:nix-community/NUR";
 
 		firefox-theme = {
@@ -53,11 +54,15 @@
 
   };
 
-  outputs = { self, nixpkgs, home-manager, noctalia, noctalia-qs, agenix, nixvim, nur, disko, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, noctalia, noctalia-qs, agenix, nixvim, nur, disko, ... }@inputs:
 
   let
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
+    pkgs-unstable = import nixpkgs-unstable {
+      inherit system;
+      config.allowUnfree = true;
+    };
     sharedModules = [
       disko.nixosModules.disko
       home-manager.nixosModules.home-manager
@@ -74,7 +79,7 @@
 
     mkHost = hostName: nixpkgs.lib.nixosSystem {
       inherit system;
-      specialArgs = { inherit inputs; };
+      specialArgs = { inherit inputs pkgs-unstable; };
       modules = sharedModules ++ [
         ./hosts/default/configuration.nix
         ./hosts/${hostName}/configuration.nix

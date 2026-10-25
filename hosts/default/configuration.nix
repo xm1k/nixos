@@ -2,7 +2,7 @@
 # your system. Help is available in the configuration.nix(5) man page, on
 # https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
 
-{ config, lib, pkgs, inputs, ... }:
+{ config, lib, pkgs, inputs, pkgs-unstable, ... }:
 
 {	
 
@@ -25,7 +25,7 @@
       export ALL_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
       export all_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
       echo "proxying..."
-      exec ${pkgs.claude-code}/bin/claude "$@"
+      exec ${pkgs-unstable.claude-code}/bin/claude "$@"
     '')
     (pkgs.writeShellScriptBin "telegram" ''
       export http_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
