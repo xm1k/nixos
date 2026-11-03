@@ -14,6 +14,7 @@
       ../../secrets/secrets-manager.nix
       ../../modules/tools/bambu.nix
       ../../modules/tools/ngate-container.nix
+      ../../modules/tools/remote-control.nix
     ];
 
 
