@@ -24,6 +24,7 @@
     ./desktop/firefox/firefox.nix
     ./tools/python.nix
     ./tools/common.nix
+    ./tools/discord.nix
     ./tools/k8s.nix
     ./tools/iceberg/iceberg.nix
     ./desktop/niri/niri.nix

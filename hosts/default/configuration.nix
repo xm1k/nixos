@@ -57,7 +57,6 @@
 		unrar
 		mpv
 		ansible
-		byedpi
 		obsidian
 		k9s
     kubectl
