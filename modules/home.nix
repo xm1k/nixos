@@ -31,8 +31,10 @@
     ./desktop/nixvim/vim.nix
     ./tools/vscode.nix
 		./tools/work.nix
+    ./tools/vault.nix
     ./tools/commands.nix
     ./tools/shell.nix
+    ./tools/activity
     ./desktop/starship/starship.nix
     ./desktop/noctalia/noctalia.nix
 		./tools/podman/podman.nix

@@ -39,6 +39,8 @@ let
     export http_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
 
     noctalia-shell > /dev/null 2>&1 & disown
+
+    systemctl --user start --no-block vault-refresh.service || true
   '';
 in
 {

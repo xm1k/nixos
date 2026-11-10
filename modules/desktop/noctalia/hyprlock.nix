@@ -5,10 +5,19 @@
     enable = true;
     settings = {
       general = {
-        lock_cmd = "pidof hyprlock || hyprlock";
-        before_sleep_cmd = "loginctl lock-session";
-        after_sleep_cmd = "hyprctl dispatch dpms on";
+        lock_cmd = "pidof hyprlock || (activity-mark lock; hyprlock; activity-mark unlock)";
+        before_sleep_cmd = "activity-mark sleep; loginctl lock-session";
+        after_sleep_cmd = "activity-mark wake; hyprctl dispatch dpms on";
       };
+
+      # Для activity-report: 3 мин без ввода — простой (отсчитывается с последнего ввода)
+      listener = [
+        {
+          timeout = 180;
+          on-timeout = "activity-mark idle 180";
+          on-resume = "activity-mark active";
+        }
+      ];
 
     #   listener = [
     #     {

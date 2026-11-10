@@ -38,9 +38,35 @@ let
       exec shpool attach "$name"
     '';
   };
+  # wc — обёртка над wl-copy:
+  #   wc "текст" / cmd | wc  — как wl-copy (флаги wl-copy тоже проходят)
+  #   wc                     — выбрать env-переменную в fzf и скопировать её значение
+  #   wc -l / -w / -c / -m / -L … — обычный coreutils wc (чтобы `cmd | wc -l` не ломался)
+  wclip = pkgs.writeShellApplication {
+    name = "wclip";
+    runtimeInputs = [ pkgs.wl-clipboard pkgs.fzf pkgs.coreutils ];
+    text = ''
+      case "''${1:-}" in
+        -l|-w|-c|-m|-L|--lines|--words|--bytes|--chars|--max-line-length|--files0-from=*|--total=*)
+          exec wc "$@" ;;
+      esac
+
+      if [ $# -gt 0 ] || [ ! -t 0 ]; then
+        exec wl-copy "$@"
+      fi
+
+      name=$(env -0 | while IFS= read -r -d "" kv; do printf '%s\n' "''${kv%%=*}"; done | sort -u | fzf --reverse --height=40% --prompt='env> ') || exit 0
+      [ -z "$name" ] && exit 0
+      printenv -- "$name" | wl-copy -n
+      echo "Скопировано: \$$name" >&2
+    '';
+  };
 in
 {
-  home.packages = [ pkgs.shpool zj zj-here ];
+  home.packages = [ pkgs.shpool zj zj-here wclip ];
+
+  # Только в интерактивном shell — скрипты продолжают видеть обычный wc
+  programs.bash.shellAliases.wc = "wclip";
 
   # Демон shpool держит сессии; запускается по сокету при первом обращении
   systemd.user.sockets.shpool = {
