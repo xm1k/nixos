@@ -28,6 +28,8 @@
       smartindent = true;
       termguicolors = true;
       cursorline = true;
+      # diff: всегда вертикально, более точный алгоритм и выравнивание строк
+      diffopt = "internal,filler,closeoff,vertical,algorithm:histogram,indent-heuristic,linematch:60";
     };	
 
     plugins = {
@@ -84,6 +86,60 @@
     };
 
     keymaps = [
+      # --- Diff двух файлов ---
+      # Выбрать файл через Telescope и открыть его справа в режиме diff с текущим
+      {
+        mode = "n";
+        key = "<leader>dd";
+        action.__raw = ''
+          function()
+            local actions = require("telescope.actions")
+            local action_state = require("telescope.actions.state")
+            require("telescope.builtin").find_files({
+              prompt_title = "Diff with",
+              attach_mappings = function(prompt_bufnr)
+                actions.select_default:replace(function()
+                  local entry = action_state.get_selected_entry()
+                  actions.close(prompt_bufnr)
+                  if entry then
+                    local path = entry.path or entry.filename or entry[1]
+                    vim.cmd("vert diffsplit " .. vim.fn.fnameescape(path))
+                  end
+                end)
+                return true
+              end,
+            })
+          end
+        '';
+        options.silent = true;
+        options.desc = "Diff current file with another file";
+      }
+      # Включить/выключить diff для уже открытых рядом окон
+      {
+        mode = "n";
+        key = "<leader>dw";
+        action.__raw = ''
+          function()
+            if vim.wo.diff then
+              vim.cmd("diffoff!")
+            else
+              local win = vim.api.nvim_get_current_win()
+              vim.cmd("windo if &buftype ==# ''' | diffthis | endif")
+              vim.api.nvim_set_current_win(win)
+            end
+          end
+        '';
+        options.silent = true;
+        options.desc = "Toggle diff for visible windows";
+      }
+      # Выйти из diff: выключить во всех окнах и закрыть остальные
+      {
+        mode = "n";
+        key = "<leader>dq";
+        action = "<cmd>diffoff! | only<CR>";
+        options.silent = true;
+        options.desc = "Close diff";
+      }
       {
         mode = "n";
         key = "<C-f>";

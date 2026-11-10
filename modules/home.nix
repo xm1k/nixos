@@ -32,6 +32,7 @@
     ./tools/vscode.nix
 		./tools/work.nix
     ./tools/commands.nix
+    ./tools/shell.nix
     ./desktop/starship/starship.nix
     ./desktop/noctalia/noctalia.nix
 		./tools/podman/podman.nix

@@ -9,6 +9,9 @@
   programs.niri.package = pkgs-unstable.niri.overrideAttrs (old: {
     patches = (old.patches or [ ]) ++ [
       ../../modules/desktop/niri/niri-shm-screencast.patch
+      # move-column/window-to-workspace-up на первом воркспейсе создаёт новый
+      # воркспейс сверху (вместо no-op). Заменяет скрипт niri-shift-workspaces-down.
+      ../../modules/desktop/niri/niri-move-up-new-workspace.patch
     ];
   });
 

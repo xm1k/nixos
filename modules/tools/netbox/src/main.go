@@ -131,11 +131,12 @@ complete -F _netbox netbox`)
 			check(0, syscall.Exec(path, append(append([]string{"ssh"}, ssh...), tail...), sshEnv()))
 		}
 		fmt.Fprintf(os.Stderr, "-> %s (%s) [sudo]\n", h.Name, h.Addr)
-		target := "-i"
+		// sshd с командой не показывает motd (как при обычном входе) — выводим сами
+		remote := "cat /run/motd.dynamic /etc/motd 2>/dev/null; exec sudo -p NBSUDO: -i"
 		if len(tail) > 0 {
-			target = "sh -c " + quote(strings.Join(tail, " "))
+			remote = "exec sudo -p NBSUDO: sh -c " + quote(strings.Join(tail, " "))
 		}
-		os.Exit(sudo(append(ssh, "exec sudo -p NBSUDO: "+target)))
+		os.Exit(sudo(append(ssh, remote)))
 	case "exec":
 		hs := search(q)
 		if len(hs) == 0 || len(tail) == 0 {

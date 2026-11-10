@@ -453,7 +453,7 @@ binds {
     Mod+Ctrl+Page_Down { move-column-to-workspace-down; }
     Mod+Ctrl+Page_Up   { move-column-to-workspace-up; }
     Alt+Ctrl+D { move-column-to-workspace-down; }
-    Alt+Ctrl+U   { spawn "niri-shift-workspaces-down"; }
+    Alt+Ctrl+U   { move-column-to-workspace-up; }
 
     // Alternatively, there are commands to move just a single window:
     // Mod+Ctrl+Page_Down { move-window-to-workspace-down; }

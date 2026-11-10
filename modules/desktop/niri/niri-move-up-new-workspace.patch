@@ -1,0 +1,59 @@
+--- a/src/layout/monitor.rs	2026-11-10 16:48:29.355783751 +0300
++++ b/src/layout/monitor.rs	2026-11-10 16:48:40.190733490 +0300
+@@ -782,7 +782,48 @@
+         }
+     }
+ 
++    /// Whether the active workspace still has windows after moving away its active window
++    /// (`whole_column == false`) or its active column (`whole_column == true`).
++    fn active_workspace_keeps_windows_after_move(&self, whole_column: bool) -> bool {
++        let ws = &self.workspaces[self.active_workspace_idx];
++        let Some(active) = ws.active_window() else {
++            return false;
++        };
++        let active_id = active.id().clone();
++        let whole_column = whole_column && !ws.floating_is_active();
++
++        let mut active_col = None;
++        let mut others = Vec::new();
++        for (tile, layout) in ws.tiles_with_ipc_layouts() {
++            let col = layout.pos_in_scrolling_layout.map(|(col, _)| col);
++            if *tile.window().id() == active_id {
++                active_col = col;
++            } else {
++                others.push(col);
++            }
++        }
++
++        if whole_column {
++            others.iter().any(|col| *col != active_col)
++        } else {
++            !others.is_empty()
++        }
++    }
++
++    /// Moving up from the topmost workspace: insert a fresh workspace above it so that the
++    /// window/column has somewhere to go. Skipped if the source workspace would become empty
++    /// (then the move would be a no-op anyway) or if there's already an empty one on top.
++    fn ensure_workspace_above_for_move(&mut self, whole_column: bool) {
++        if self.active_workspace_idx == 0
++            && !self.options.layout.empty_workspace_above_first
++            && self.active_workspace_keeps_windows_after_move(whole_column)
++        {
++            self.add_workspace_top();
++        }
++    }
++
+     pub fn move_to_workspace_up(&mut self, focus: bool) {
++        self.ensure_workspace_above_for_move(false);
+         let source_workspace_idx = self.active_workspace_idx;
+ 
+         let new_idx = source_workspace_idx.saturating_sub(1);
+@@ -908,6 +949,7 @@
+     }
+ 
+     pub fn move_column_to_workspace_up(&mut self, activate: bool) {
++        self.ensure_workspace_above_for_move(true);
+         let source_workspace_idx = self.active_workspace_idx;
+ 
+         let new_idx = source_workspace_idx.saturating_sub(1);
