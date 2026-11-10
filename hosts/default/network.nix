@@ -70,26 +70,18 @@ in
 		};
 	};
 
-	services.resolved.enable = false;
+	# DNS по линкам: NM отдаёт в resolved DNS роутера (DHCP), tailscale регистрирует
+	# MagicDNS (100.100.100.100) на tailscale0 через D-Bus, work-vpn вешает yadro.com на tun0.
+	services.resolved = {
+		enable = true;
+		# Используются только если ни у одного интерфейса нет DNS
+		fallbackDns = [ "77.88.8.8" "1.1.1.1" ];
+	};
 
-  networking = {
-    extraHosts = "";
-    networkmanager = {
-      enable = true;
-      dns = "dnsmasq";
-    };
-  };
-
-  environment.etc."NetworkManager/dnsmasq.d/b-net.conf".text = ''
-    address=/b.net/192.168.31.63
-    address=/s.net/194.169.160.248
-    server=172.17.2.11
-    server=77.88.8.8
-    server=1.1.1.1
-    server=8.8.8.8
-    server=/nn.gw.yadro.com/8.8.8.8
-    server=/yadro.com/172.31.129.43
-  '';
+	networking.networkmanager = {
+		enable = true;
+		dns = "systemd-resolved";
+	};
 
   networking.firewall.enable = false;
 

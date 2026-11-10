@@ -9,4 +9,5 @@ in
 	"github_token.age".publicKeys = [ xm1k ];
 	"gitlab_token.age".publicKeys = [ xm1k ];
 	"tailscale_authkey.age".publicKeys = [ xm1k ];
+	"kilo_config.age".publicKeys = [ xm1k ];
 }

@@ -1,0 +1,257 @@
+package main
+
+// Background worker: commands queue operations and return at once, a
+// detached `jira __worker` sends them to Jira one by one.
+
+import (
+	"cmp"
+	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
+)
+
+// spawnWorker starts a detached worker (it exits at once if one is running).
+// A variable so tests can replace it.
+var spawnWorker = func() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	logf, err := os.OpenFile(statePath("worker.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	defer logf.Close()
+	cmd := exec.Command(exe, "__worker")
+	cmd.Stdout, cmd.Stderr = logf, logf
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("не удалось запустить фоновый обработчик: %w", err)
+	}
+	return cmd.Process.Release()
+}
+
+func enqueue(op *Op) error {
+	err := updateQueue(func(q *Queue) {
+		q.Seq++
+		op.ID = q.Seq
+		q.Pending = append(q.Pending, op)
+	})
+	if err != nil {
+		return err
+	}
+	return spawnWorker()
+}
+
+// submit runs the op now (wait) or queues it and prints a line.
+func submit(op *Op, wait bool) error {
+	if wait {
+		return runNow(op)
+	}
+	if err := enqueue(op); err != nil {
+		return err
+	}
+	fmt.Println(yellow("⏳"), "@"+strconv.Itoa(op.ID), op)
+	return nil
+}
+
+// runNow executes an op in the foreground, then refreshes the cache in the background.
+func runNow(op *Op) error {
+	c, err := newClient()
+	if err != nil {
+		return err
+	}
+	d, err := execute(c, op)
+	if err != nil {
+		return err
+	}
+	if op.Kind != "sync" {
+		fmt.Printf("%s %s: %s\n", green("✓"), bold(d.Key), d.Result)
+		_ = enqueue(&Op{Kind: "sync"})
+	}
+	if d.Warn != "" {
+		fmt.Fprintln(os.Stderr, yellow("не всё получилось:"), d.Warn)
+	}
+	return nil
+}
+
+func runWorker() error {
+	for {
+		l, err := lock("worker.lock", false)
+		if err != nil {
+			return nil // another worker is on it
+		}
+		stop := drain()
+		l.Close()
+		// An op may have been queued while its own worker saw our lock: look again.
+		if stop || len(loadQueue().Pending) == 0 {
+			return nil
+		}
+	}
+}
+
+// drain processes the queue; stop is true when Jira is unreachable.
+func drain() (stop bool) {
+	c, err := newClient()
+	if err != nil {
+		log.Print(err)
+		return true
+	}
+	changed := false
+	for {
+		q := loadQueue()
+		if len(q.Pending) == 0 {
+			break
+		}
+		op := q.Pending[0]
+		var d Done
+		for _, wait := range []time.Duration{0, 3 * time.Second, 15 * time.Second} {
+			time.Sleep(wait)
+			if d, err = execute(c, op); !transient(err) {
+				break
+			}
+		}
+		if transient(err) {
+			log.Printf("@%d %s: нет связи: %v", op.ID, op, err)
+			_ = updateQueue(func(q *Queue) {
+				for _, p := range q.Pending {
+					if p.ID == op.ID {
+						p.Error = err.Error()
+					}
+				}
+			})
+			return true
+		}
+		log.Printf("@%d %s: %s", op.ID, op, cmp.Or(errText(err), "ok "+d.Result))
+		if err := finish(op, d, err); err != nil {
+			log.Print(err)
+			return true
+		}
+		changed = op.Kind != "sync"
+	}
+	if changed { // so that `list` shows the new state
+		if err := doSync(c); err != nil {
+			log.Print("обновление кэша: ", err)
+		}
+	}
+	return false
+}
+
+func errText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return "ошибка: " + err.Error()
+}
+
+// resolveRef turns "@12" (a queued create) into the created issue key.
+func resolveRef(ref string) (string, error) {
+	id, err := strconv.Atoi(strings.TrimPrefix(ref, "@"))
+	if !strings.HasPrefix(ref, "@") || err != nil {
+		return ref, nil
+	}
+	if key, ok := createdKey(id); ok {
+		return key, nil
+	}
+	return "", fmt.Errorf("%s: задача ещё не создана или создание не удалось (jira q)", ref)
+}
+
+func execute(c *Client, op *Op) (d Done, err error) {
+	switch op.Kind {
+	case "sync":
+		return d, doSync(c)
+	case "create":
+		n := *op.Issue
+		if n.Epic, err = resolveRef(n.Epic); err != nil {
+			return d, err
+		}
+		key, warns, err := c.create(n)
+		return Done{Key: key, Result: key, Warn: strings.Join(warns, "; ")}, err
+	}
+	if d.Key, err = resolveRef(op.Key); err != nil {
+		return d, err
+	}
+	switch op.Kind {
+	case "move":
+		if d.Result, err = c.move(d.Key, op.Target, loadCache()); err == nil && op.Comment != "" {
+			// The move is done: a failed comment is a warning, not a retry.
+			if err := c.comment(d.Key, op.Comment); err != nil {
+				d.Warn = "комментарий не добавлен: " + err.Error() + "\nтекст: " + op.Comment
+			}
+		}
+	case "comment":
+		d.Result, err = "комментарий добавлен", c.comment(d.Key, op.Comment)
+	case "set":
+		var done []string
+		if op.Estimate != "" {
+			if err = c.setEstimate(d.Key, op.Estimate); err != nil {
+				return d, fmt.Errorf("оценка: %w", err)
+			}
+			done = append(done, "оценка "+op.Estimate)
+		}
+		if op.Epic != "" {
+			epic := ""
+			if op.Epic != noEpic {
+				if epic, err = resolveRef(op.Epic); err != nil {
+					return d, err
+				}
+			}
+			if err = c.setEpic(d.Key, epic); err != nil {
+				return d, fmt.Errorf("эпик: %w", err)
+			}
+			done = append(done, "эпик "+cmp.Or(epic, "убран"))
+		}
+		d.Result = strings.Join(done, ", ")
+	default:
+		err = fmt.Errorf("неизвестная операция %q", op.Kind)
+	}
+	return d, err
+}
+
+// doSync refreshes the cache: my recent issues, my open epics, board columns, statuses.
+func doSync(c *Client) error {
+	const mine = "assignee = currentUser() AND "
+	fields := []string{"summary", "status", "issuetype"}
+	scope := mine + "(statusCategory != Done OR updated >= -14d)"
+	cache := &Cache{Updated: time.Now(), Statuses: map[string]string{}, StatusCategories: map[string]string{}}
+	var issues []Issue
+	var err error
+	if c.Board != "" {
+		if cache.Columns, err = c.columns(c.Board); err == nil {
+			issues, err = c.boardIssues(c.Board, scope, fields)
+		}
+	} else {
+		issues, err = c.search(scope+" ORDER BY updated DESC", fields, "", 300)
+	}
+	if err != nil {
+		return err
+	}
+	epics, err := c.search(mine+"issuetype = Epic AND statusCategory != Done ORDER BY updated DESC", fields, "", 300)
+	if err != nil {
+		return err
+	}
+	statuses, err := c.statuses()
+	if err != nil {
+		return err
+	}
+	for _, s := range statuses {
+		cache.Statuses[s.ID], cache.StatusCategories[s.ID] = s.Name, s.StatusCategory.Key
+	}
+	cache.Issues, cache.Epics = toItems(issues), toItems(epics)
+	return saveCache(cache)
+}
+
+func toItems(issues []Issue) []Item {
+	out := make([]Item, len(issues))
+	for i, is := range issues {
+		st := is.status()
+		out[i] = Item{Key: is.Key, Summary: is.Fields.Summary, Status: st.Name, StatusID: st.ID,
+			Category: st.StatusCategory.Key, Type: is.Fields.IssueType.String()}
+	}
+	return out
+}

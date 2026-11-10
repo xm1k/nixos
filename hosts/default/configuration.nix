@@ -15,6 +15,8 @@
       ../../modules/tools/bambu.nix
       ../../modules/tools/ngate-container.nix
       ../../modules/tools/remote-control.nix
+      ../../modules/tools/kilo.nix
+      ../../modules/tools/jira
     ];
 
 
