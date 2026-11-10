@@ -1,2 +1,4 @@
 flake.lock
 .claude
+__pycache__/
+*.pyc

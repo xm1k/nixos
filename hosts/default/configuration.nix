@@ -17,6 +17,7 @@
       ../../modules/tools/remote-control.nix
       ../../modules/tools/kilo.nix
       ../../modules/tools/jira
+      ../../modules/tools/netbox
     ];
 
 
@@ -108,9 +109,10 @@
   ];
 
 	environment.variables = {
-    SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
-    SSL_CERT_DIR = "${pkgs.cacert}/etc/ssl/certs";
-    NIX_SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+    # системный бандл: cacert + security.pki.certificateFiles (certs/work.crt)
+    SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
+    SSL_CERT_DIR = "/etc/ssl/certs";
+    NIX_SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
     NIXOS_OZONE_WL = "1";
 	};
 
@@ -208,6 +210,7 @@
 
   environment.variables = {
 		DISPLAY = ":1";
+		WORK_ADMIN_USER = "da.smirnov_adm";
   };
 
   nixpkgs.overlays = [ inputs.nix4vscode.overlays.default ];
