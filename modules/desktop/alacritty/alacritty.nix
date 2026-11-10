@@ -45,6 +45,13 @@
 				size = 11.0;
 			};	
 
+			# Ctrl+Shift+F: в обычной оболочке — поиск alacritty,
+			# в полноэкранных программах (alt screen: neovim и т.п.) — передаётся программе (live_grep).
+			keyboard.bindings = [
+				{ key = "F"; mods = "Control|Shift"; mode = "~Alt|~Search"; action = "SearchForward"; }
+				{ key = "F"; mods = "Control|Shift"; mode = "Alt|~Search"; action = "ReceiveChar"; }
+			];
+
 		};
 	};
 }

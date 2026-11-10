@@ -21,7 +21,7 @@
 
     opts = {
       number = true;
-      relativenumber = true;
+      relativenumber = false;
       shiftwidth = 2;
       tabstop = 2;
 			expandtab = true;
@@ -36,9 +36,16 @@
 
 			lualine.enable = true;
 
-      neo-tree.enable = true;
+      neo-tree = {
+        enable = true;
+        # освобождаем <C-f>, чтобы глобальный поиск файлов работал и в дереве
+        settings.window.mappings."<C-f>" = "none";
+      };
 
       treesitter.enable = true;
+
+      # Поиск и замена как в VS Code (Ctrl+H / Ctrl+Shift+H)
+      grug-far.enable = true;
 
       telescope = {
         enable = true;
@@ -77,6 +84,48 @@
     };
 
     keymaps = [
+      {
+        mode = "n";
+        key = "<C-f>";
+        action = "<cmd>Telescope find_files<CR>";
+        options.silent = true;
+        options.desc = "Find files by name";
+      }
+      {
+        mode = "n";
+        key = "<C-S-f>";
+        action = "<cmd>Telescope live_grep<CR>";
+        options.silent = true;
+        options.desc = "Search text in files";
+      }
+      {
+        mode = "n";
+        key = "<C-h>";
+        action.__raw = ''function() require("grug-far").open({ prefills = { paths = vim.fn.expand("%") } }) end'';
+        options.silent = true;
+        options.desc = "Replace in current file";
+      }
+      {
+        mode = "v";
+        key = "<C-h>";
+        action.__raw = ''function() require("grug-far").with_visual_selection({ prefills = { paths = vim.fn.expand("%") } }) end'';
+        options.silent = true;
+        options.desc = "Replace selection in current file";
+      }
+      {
+        mode = "n";
+        key = "<C-S-h>";
+        action.__raw = ''function() require("grug-far").open() end'';
+        options.silent = true;
+        options.desc = "Replace in all files";
+      }
+      {
+        mode = "v";
+        key = "<C-S-h>";
+        action.__raw = ''function() require("grug-far").with_visual_selection() end'';
+        options.silent = true;
+        options.desc = "Replace selection in all files";
+      }
       {
         mode = "n";
         key = "<leader>t";
