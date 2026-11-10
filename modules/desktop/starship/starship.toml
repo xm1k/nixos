@@ -2,7 +2,7 @@
 
 add_newline = false
 
-format = "$username[❄️ ](text)$directory$git_branch$git_status(fg:green): "
+format = "${env_var.SHPOOL_SESSION_NAME}$username[❄️ ](text)$directory$git_branch$git_status(fg:green): "
 right_format = ""
 
 palette = 'catppuccin_macchiato'
@@ -80,3 +80,8 @@ disabled = false
 time_format = "%Y-%m-%d %H:%M:%S"
 style = "bg:blue"
 format = '[[  $time ](fg:text bg:surface0)]($style)'
+
+# Метка shpool-сессии (видна только внутри сессии)
+[env_var.SHPOOL_SESSION_NAME]
+style = "overlay0"
+format = '[⧉ $env_value]($style)'

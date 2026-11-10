@@ -353,6 +353,7 @@ binds {
 
     // Suggested binds for running programs: terminal, app launcher, screen locker.
     Alt+W hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
+    Alt+Shift+W hotkey-overlay-title="Zellij sessions" { spawn "alacritty" "-e" "zj"; }
     Mod+W hotkey-overlay-title="Noctalia Launcher" { spawn-sh "noctalia msg panel-open launcher"; }
     Ctrl+Alt+L hotkey-overlay-title="Lock the Screen: hyprlock" { spawn "hyprlock"; }
 
