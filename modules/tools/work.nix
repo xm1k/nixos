@@ -44,6 +44,8 @@ let
   '';
 in
 {
+  imports = [ ./workenv ];
+
   home.packages = [
     work-vpn
     pkgs.mailspring

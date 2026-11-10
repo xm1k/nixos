@@ -44,6 +44,12 @@
 			group = "users";
 			mode = "0400";
 		};
+		"work_env" = {
+			file = ./work_env.age;
+			owner = "xm1k";
+			group = "users";
+			mode = "0400";
+		};
   };
 
   environment.systemPackages = [
@@ -58,5 +64,13 @@
 		export GITLAB_TOKEN=$(cat ${config.age.secrets.gitlab_token.path} 2>/dev/null)
 		export TS_AUTHKEY=$(cat ${config.age.secrets.tailscale_authkey.path} 2>/dev/null)
 		export DEPLOY_USER=xm1k
+		# work_env (KEY=VALUE, без кавычек): построчно, без eval — значения с $ ! * не раскрываются.
+		if [ -r ${config.age.secrets.work_env.path} ]; then
+			while IFS= read -r __l || [ -n \"$__l\" ]; do
+				case \"$__l\" in ''|'#'*) continue ;; esac
+				export \"\${__l%%=*}=\${__l#*=}\"
+			done < ${config.age.secrets.work_env.path}
+			unset __l
+		fi
 	";
 }
