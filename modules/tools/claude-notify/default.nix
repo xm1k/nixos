@@ -1,6 +1,7 @@
-# Уведомление «Claude закончил»: персонаж (claude-peek) выглядывает из-за
-# нижнего края экрана и в облачке пишет, какая сессия закончила работу.
-# ЛКМ по нему фокусирует нужное окно Alacritty в niri, ПКМ — закрыть.
+# Уведомление «Claude закончил»: плашка (claude-peek) в правом нижнем углу —
+# тёмная, полупрозрачная, с оранжевой рамкой и шрифтом терминала — пишет,
+# какая сессия закончила работу; справа из-под неё пружинисто выдвигается Claude.
+# ЛКМ по ней фокусирует нужное окно Alacritty в niri, ПКМ — закрыть.
 # Не показывается, если окно с этим claude уже в фокусе.
 #
 # Показ идёт через службу systemd --user `claude-peek`:
@@ -11,8 +12,8 @@
 let
   peekPython = pkgs.python3.withPackages (ps: [ ps.pygobject3 ps.pycairo ]);
 
-  # Пиксельный шрифт с кириллицей — только для claude-peek.
-  peekFonts = pkgs.makeFontsConf { fontDirectories = [ pkgs.terminus_font_ttf pkgs.dejavu_fonts ]; };
+  # Шрифт как в Alacritty (+ DejaVu на всякий случай).
+  peekFonts = pkgs.makeFontsConf { fontDirectories = [ pkgs.nerd-fonts.jetbrains-mono pkgs.dejavu_fonts ]; };
 
   claude-peek = pkgs.stdenv.mkDerivation {
     pname = "claude-peek";
@@ -93,7 +94,7 @@ in
 
   systemd.user.services.claude-peek = {
     Unit = {
-      Description = "Claude Code: пиксельное уведомление о завершении сессии";
+      Description = "Claude Code: уведомление о завершении сессии";
       PartOf = [ "graphical-session.target" ];
       After = [ "graphical-session.target" ];
     };

@@ -29,6 +29,8 @@ const usage = `netbox — поиск хостов из NetBox-инвентаря
   --infra (у ssh/exec)                                   под пользователем infra, пароль из $INFRA_PASS
   netbox ls [-s] [запрос...]                             найти хосты (-s только имена)
   netbox show <запрос...>                                переменные хоста
+  netbox shell [-u user] <запрос...>                     локальный bash: корень хоста в ~/r/<host> (sshfs),
+                                                         SHELL=nbsh и r <cmd> выполняют команды на хосте (без sudo)
   netbox exec [-y] [-u user] <запрос...> -- команда      команда на всех найденных
   netbox update [файл.yaml]                              обновить кеш (по умолчанию из artifactory)
   netbox completion                                      bash completion
@@ -56,6 +58,10 @@ type node struct {
 }
 
 func main() {
+	if filepath.Base(os.Args[0]) == "nbsh" {
+		nbsh(os.Args[1:])
+		return
+	}
 	if os.Getenv("NB_ASKPASS") != "" { // ssh вызывает нас как SSH_ASKPASS
 		if p := strings.ToLower(strings.Join(os.Args[1:], " ")); !strings.Contains(p, "yes/no") && !strings.Contains(p, "passphrase") {
 			fmt.Println(os.Getenv(os.Getenv("NB_ASKPASS")))
@@ -72,7 +78,7 @@ func main() {
 	if len(args) > 0 {
 		cmd = args[0]
 		switch cmd {
-		case "ls", "show", "ssh", "exec", "update", "completion":
+		case "ls", "show", "ssh", "shell", "exec", "update", "completion":
 			args = args[1:]
 		case "-h", "--help", "help":
 			fmt.Print(usage)
@@ -107,7 +113,7 @@ func main() {
 		hs := check(update(src))
 		fmt.Fprintf(os.Stderr, "netbox: %d хостов -> %s\n", len(hs), cacheFile)
 	case "completion":
-		fmt.Println(`_netbox() { COMPREPLY=($(compgen -W "$( ((COMP_CWORD == 1)) && echo ls show ssh exec update) $(netbox ls -s 2>/dev/null)" -- "${COMP_WORDS[COMP_CWORD]}")); }
+		fmt.Println(`_netbox() { COMPREPLY=($(compgen -W "$( ((COMP_CWORD == 1)) && echo ls show ssh shell exec update) $(netbox ls -s 2>/dev/null)" -- "${COMP_WORDS[COMP_CWORD]}")); }
 complete -F _netbox netbox`)
 	case "ls":
 		hs := search(q)
@@ -141,6 +147,8 @@ complete -F _netbox netbox`)
 			remote = "exec sudo -p NBSUDO: sh -c " + quote(strings.Join(tail, " "))
 		}
 		os.Exit(sudo(append(ssh, remote)))
+	case "shell":
+		remoteShell(pick(search(q)), user)
 	case "exec":
 		hs := search(q)
 		if len(hs) == 0 || len(tail) == 0 {

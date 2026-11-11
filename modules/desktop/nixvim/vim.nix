@@ -204,6 +204,11 @@
     ];
 
     globals.mapleader = " ";
+
+    # внутри `netbox shell` shell=nbsh (команды на хосте): фильтры через пайпы, а не temp-файлы
+    extraConfigLua = ''
+      if vim.env.NB_HOST then vim.o.shelltemp = false end
+    '';
   };
 }
 

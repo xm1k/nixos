@@ -1,14 +1,16 @@
-"""claude-peek: пиксельный Claude выглядывает из-за края экрана и
-сообщает, какая сессия закончила работу.
+"""claude-peek: плашка в правом нижнем углу сообщает, какая сессия
+Claude закончила работу (тёмная, полупрозрачная, оранжевая рамка, шрифт терминала).
+Справа от плашки из-под её нижнего края пружинисто, с отдачей, выпрыгивает
+пиксельный Claude в полный рост.
 
 ЛКМ — перейти к окну и закрыть, ПКМ — просто закрыть.
-Пока курсор над персонажем/облачком, он не уходит.
+Пока курсор над плашкой, она не уходит.
 
 Работает как служба systemd --user `claude-peek` (выключить: claude-peek-off,
 включить: claude-peek-on). Во время демонстрации экрана (niri msg casts)
 уведомления не показываются.
 
-claude-peek --demo — предпросмотр (15 с); --scale K (0.25.., по умолчанию 1.5
+claude-peek --demo — предпросмотр (15 с); --scale K (0.25.., по умолчанию 1
 или $CLAUDE_PEEK_SCALE), --stay SEC.
 --frames DIR — отрендерить анимацию в PNG-кадры (для превью), без окна.
 """
@@ -28,26 +30,27 @@ import gi
 
 gi.require_version("Pango", "1.0")
 gi.require_version("PangoCairo", "1.0")
-from gi.repository import Pango, PangoCairo  # noqa: E402
+from gi.repository import GLib, Pango, PangoCairo  # noqa: E402
 
-FONT = "Terminus (TTF)"
+FONT = "JetBrainsMono Nerd Font"  # как в Alacritty
 
-ORANGE = (0.843, 0.467, 0.341)  # #D77757 — цвет маскота Claude Code
-INK = (0.08, 0.07, 0.07)
-CREAM = (0.96, 0.93, 0.88)
-DIM = (0.62, 0.60, 0.58)
-BUBBLE_BG = (0.10, 0.10, 0.12)
-SHADOW = (0.0, 0.0, 0.0, 0.45)
+ORANGE = (0.843, 0.467, 0.341)  # #D77757 — цвет Claude Code
+CREAM = (0.93, 0.91, 0.88)
+DIM = (0.60, 0.58, 0.56)
+BG = (0.08, 0.08, 0.09, 0.82)  # тёмный, немного прозрачный
 
 # Тайминги (сек)
-RISE_T = 0.1
+RISE_T = 0.15
 STAY_T = 3.0
-LEAVE_T = 0.1
+LEAVE_T = 0.25
 
-P = 6  # размер пикселя персонажа
-B = 2  # размер пикселя облачка
+BW = 380  # ширина плашки
+R = 8  # радиус скругления
+BORDER = 1.5
+PAD = 14
+SLIDE = 10  # на сколько пикселей выезжает снизу
 
-# Спрайт маскота; над краем экрана видны строки 0-5 (руки держатся за край).
+# Пиксельный маскот Claude Code в полный рост: голова, руки, ноги.
 SPRITE = [
     "...XXXXXXXXXXXX...",
     "...XXXXXXXXXXXX...",
@@ -55,78 +58,109 @@ SPRITE = [
     "...XXEXXXXXXEXX...",
     ".XXXXXXXXXXXXXXXX.",
     ".XXXXXXXXXXXXXXXX.",
+    "...XXXXXXXXXXXX...",
+    "...XXXXXXXXXXXX...",
+    "....X.X....X.X....",
+    "....X.X....X.X....",
 ]
-COLS = len(SPRITE[0])
-ROWS = len(SPRITE)
-CW = COLS * P
-W, H = 440, 72
-CX0 = W - CW - 2
+P = 5  # размер пикселя маскота; высота = высоте плашки
+INK = (0.08, 0.07, 0.07)
+CW, CH = len(SPRITE[0]) * P, len(SPRITE) * P
+GAP = 8  # между плашкой и маскотом
+# Выдвижение Claude — затухающая пружина: 1 - e^(-DAMP·s)·cos(FREQ·s)
+CLAUDE_DELAY = 0.06  # чуть позже плашки
+SPRING_DAMP = 7.0
+SPRING_FREQ = 17.0  # первый перелёт ~27% высоты, потом отдача вниз и успокоение
+TOP = 16  # запас сверху под перелёт
+
+BH = CH  # высота плашки
+W = BW + GAP + CW
+H = TOP + BH + SLIDE
+CX0 = BW + GAP
+BASE = TOP + BH  # линия, из-под которой выдвигается Claude
 
 
 def clamp(x, a=0.0, b=1.0):
     return max(a, min(b, x))
 
 
-def snap(v, step):
-    return round(v / step) * step
+def ease(x):
+    return 1 - (1 - x) ** 3
 
 
 class Scene:
     def __init__(self, project, detail):
         detail = detail.lstrip("✳✶✻✽✢·*⠀⠁⠂⠄⡀⢀⠠⠐⠈ \t")
         cr = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1))
-        right = CX0 - 4 * B
-        pad = 4 * B
-        max_w = right - 2 * pad - 2 * B
-        self.lines = [self._layout(cr, f"{project or 'claude'} — готово", 16, True, max_w, CREAM)]
+        max_w = BW - 2 * PAD - 2 * BORDER
+        self.lines = [self._layout(cr, f"{project or 'claude'} — готово", 13, True, max_w, CREAM, mark=True)]
         if detail:
-            self.lines.append(self._layout(cr, detail, 14, False, max_w, DIM))
-        h = sum(l.get_pixel_size()[1] for l, _ in self.lines)
-        inner = max(l.get_pixel_size()[0] for l, _ in self.lines)
-        self.bw = snap(inner + 2 * pad, B)
-        self.bh = snap(h + 2 * pad - 2, B)
-        self.bx = snap(right - self.bw, B)
-        self.by = H - self.bh - 2 * B
-        self.pad = pad
+            self.lines.append(self._layout(cr, detail, 11.5, False, max_w, DIM))
 
     @staticmethod
-    def _layout(cr, text, px, bold, width, color):
+    def _layout(cr, text, px, bold, width, color, mark=False):
         layout = PangoCairo.create_layout(cr)
         fo = cairo.FontOptions()
-        fo.set_antialias(cairo.ANTIALIAS_NONE)
-        fo.set_hint_style(cairo.HINT_STYLE_NONE)  # с хинтингом Terminus 14px рвётся
-        fo.set_hint_metrics(cairo.HINT_METRICS_ON)
+        fo.set_antialias(cairo.ANTIALIAS_GRAY)
+        fo.set_hint_style(cairo.HINT_STYLE_SLIGHT)
         PangoCairo.context_set_font_options(layout.get_context(), fo)
         fd = Pango.FontDescription(FONT)
         fd.set_absolute_size(px * Pango.SCALE)
         if bold:
             fd.set_weight(Pango.Weight.BOLD)
         layout.set_font_description(fd)
-        layout.set_text(text, -1)
+        if mark:  # оранжевая звёздочка Claude перед заголовком
+            star = '<span foreground="#D77757">✻</span> '
+            layout.set_markup(star + GLib.markup_escape_text(text, -1), -1)
+        else:
+            layout.set_text(text, -1)
         layout.set_width(int(width * Pango.SCALE))
         layout.set_ellipsize(Pango.EllipsizeMode.END)
         return layout, color
 
     def input_rects(self):
-        return [(self.bx, self.by, W - self.bx, H - self.by)]
+        return [(0, TOP, W, BH)]
 
     def draw(self, cr, t, leave_t=None):
-        cr.set_antialias(cairo.ANTIALIAS_NONE)
         cr.set_operator(cairo.OPERATOR_SOURCE)
         cr.set_source_rgba(0, 0, 0, 0)
         cr.paint()
         cr.set_operator(cairo.OPERATOR_OVER)
 
-        k = clamp(t / RISE_T)
+        k = ease(clamp(t / RISE_T))
         if leave_t is not None:
-            k *= 1 - clamp(leave_t / LEAVE_T)
-        if k >= 1:
-            self._draw_bubble(cr)
-        rows_up = math.floor(ROWS * k)
-        if rows_up > 0:
-            self._draw_claude(cr, H - rows_up * P)
+            k *= 1 - ease(clamp(leave_t / LEAVE_T))
+        if k <= 0:
+            return
+        cr.push_group()
+        cr.translate(0, TOP + round((1 - k) * SLIDE))
+        self._draw_banner(cr)
+        cr.pop_group_to_source()
+        cr.paint_with_alpha(k)
+        self._draw_claude(cr, self._rise(t, leave_t))
 
-    def _draw_claude(self, cr, top):
+    @staticmethod
+    def _rise(t, leave_t):
+        """Насколько Claude выдвинут (доля высоты): пружина с перелётом и отдачей;
+        при уходе — короткий подскок и нырок вниз (ease-in-back)."""
+        s = t - CLAUDE_DELAY
+        if s <= 0:
+            return 0.0
+        p = max(0.0, 1 - math.exp(-SPRING_DAMP * s) * math.cos(SPRING_FREQ * s))
+        if leave_t is not None:
+            q = clamp(leave_t / LEAVE_T)
+            p *= 1 - q * q * (2.7 * q - 1.7)
+        return p
+
+    @staticmethod
+    def _draw_claude(cr, p):
+        if p <= 0:
+            return
+        cr.save()
+        cr.set_antialias(cairo.ANTIALIAS_NONE)
+        cr.rectangle(CX0, 0, CW, BASE)  # ниже линии не видно — «прячется»
+        cr.clip()
+        top = BASE - round(CH * p)
         for r, line in enumerate(SPRITE):
             for c, ch in enumerate(line):
                 if ch == ".":
@@ -134,34 +168,34 @@ class Scene:
                 cr.set_source_rgb(*(INK if ch == "E" else ORANGE))
                 cr.rectangle(CX0 + c * P, top + r * P, P, P)
                 cr.fill()
+        cr.restore()
 
-    def _box(self, cr, x, y, w, h, color):
-        cr.set_source_rgba(*color)
-        cr.rectangle(x + B, y, w - 2 * B, h)
-        cr.rectangle(x, y + B, B, h - 2 * B)
-        cr.rectangle(x + w - B, y + B, B, h - 2 * B)
-        cr.fill()
+    @staticmethod
+    def _rounded(cr, x, y, w, h, r):
+        cr.new_sub_path()
+        cr.arc(x + w - r, y + r, r, -math.pi / 2, 0)
+        cr.arc(x + w - r, y + h - r, r, 0, math.pi / 2)
+        cr.arc(x + r, y + h - r, r, math.pi / 2, math.pi)
+        cr.arc(x + r, y + r, r, math.pi, 3 * math.pi / 2)
+        cr.close_path()
 
-    def _draw_bubble(self, cr):
-        x, y, w, h = self.bx, self.by, self.bw, self.bh
-        self._box(cr, x + B, y + B, w, h, SHADOW)
-        self._box(cr, x, y, w, h, (*ORANGE, 1))
-        self._box(cr, x + B, y + B, w - 2 * B, h - 2 * B, (*BUBBLE_BG, 1))
-        # хвостик
-        ty = y + h - 6 * B - 3 * P
+    def _draw_banner(self, cr):
+        h_box = BH
+        b = BORDER / 2
+        self._rounded(cr, b, b, BW - 2 * b, h_box - 2 * b, R)
+        cr.set_source_rgba(*BG)
+        cr.fill_preserve()
         cr.set_source_rgb(*ORANGE)
-        cr.rectangle(x + w, ty, 2 * B, 3 * B)
-        cr.rectangle(x + w + 2 * B, ty + B, B, B)
-        cr.fill()
-        cr.set_source_rgb(*BUBBLE_BG)
-        cr.rectangle(x + w - B, ty + B, 2 * B, B)
-        cr.fill()
-        ly = y + self.pad - 2
+        cr.set_line_width(BORDER)
+        cr.stroke()
+
+        text_h = sum(l.get_pixel_size()[1] for l, _ in self.lines) + 2 * (len(self.lines) - 1)
+        y = (h_box - text_h) / 2
         for layout, color in self.lines:
-            cr.move_to(x + self.pad, ly)
+            cr.move_to(PAD, y)
             cr.set_source_rgb(*color)
             PangoCairo.show_layout(cr, layout)
-            ly += layout.get_pixel_size()[1]
+            y += layout.get_pixel_size()[1] + 2
 
 
 # ---------------------------------------------------------------- слоты
@@ -213,7 +247,8 @@ def run_window(args, scene, slot):
     GtkLayerShell.set_layer(win, GtkLayerShell.Layer.OVERLAY)
     GtkLayerShell.set_anchor(win, GtkLayerShell.Edge.BOTTOM, True)
     GtkLayerShell.set_anchor(win, GtkLayerShell.Edge.RIGHT, True)
-    GtkLayerShell.set_margin(win, GtkLayerShell.Edge.RIGHT, 24 + int(slot * (W + 8) * k))
+    GtkLayerShell.set_margin(win, GtkLayerShell.Edge.RIGHT, 24)
+    GtkLayerShell.set_margin(win, GtkLayerShell.Edge.BOTTOM, 24 + int(slot * (BH + 8) * k))
     GtkLayerShell.set_exclusive_zone(win, -1)
     GtkLayerShell.set_keyboard_mode(win, GtkLayerShell.KeyboardMode.NONE)
 
@@ -228,18 +263,8 @@ def run_window(args, scene, slot):
     def on_draw(_w, cr):
         now = time.monotonic()
         lt = None if state["leave_at"] is None else now - state["leave_at"]
-        if k == 1:
-            scene.draw(cr, now - state["t0"], lt)
-            return False
-        # масштаб: рисуем в 1x и растягиваем (вверх — без сглаживания, чтобы пиксели
-        # оставались квадратными; вниз — со сглаживанием, иначе пиксели теряются)
-        surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
-        scene.draw(cairo.Context(surf), now - state["t0"], lt)
-        cr.set_operator(cairo.OPERATOR_SOURCE)
         cr.scale(k, k)
-        cr.set_source_surface(surf, 0, 0)
-        cr.get_source().set_filter(cairo.FILTER_NEAREST if k >= 1 else cairo.FILTER_GOOD)
-        cr.paint()
+        scene.draw(cr, now - state["t0"], lt)
         return False
 
     def on_click(_w, ev):
@@ -295,7 +320,8 @@ def run_window(args, scene, slot):
 def render_frames(scene, out, fps):
     """Кадры: подъём, печать, ожидание, уход."""
     os.makedirs(out, exist_ok=True)
-    stay, total = 0.6, 0.6 + LEAVE_T + 0.1
+    stay = CLAUDE_DELAY + 0.7
+    total = stay + LEAVE_T + 0.1
     for i in range(int(total * fps) + 1):
         t = i / fps
         surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, W, H)
@@ -391,8 +417,8 @@ def main():
     ap.add_argument(
         "--scale",
         type=float,
-        default=float(os.environ.get("CLAUDE_PEEK_SCALE", 1.5)),
-        help="масштаб, например 0.75 или 2 (по умолчанию $CLAUDE_PEEK_SCALE или 1.5)",
+        default=float(os.environ.get("CLAUDE_PEEK_SCALE", 1.0)),
+        help="масштаб, например 0.75 или 2 (по умолчанию $CLAUDE_PEEK_SCALE или 1)",
     )
     ap.add_argument(
         "--demo",

@@ -2,7 +2,7 @@
 
 add_newline = false
 
-format = "${env_var.SHPOOL_SESSION_NAME}$username[❄️ ](text)$directory$git_branch$git_status(fg:green): "
+format = "${env_var.SHPOOL_SESSION_NAME}${env_var.NB_HOST}$username[❄️ ](text)$directory$git_branch$git_status(fg:green): "
 right_format = ""
 
 palette = 'catppuccin_macchiato'
@@ -85,3 +85,8 @@ format = '[[  $time ](fg:text bg:surface0)]($style)'
 [env_var.SHPOOL_SESSION_NAME]
 style = "overlay0"
 format = '[⧉ $env_value]($style)'
+
+# Метка `netbox shell` — файлы и команды на удалённом хосте
+[env_var.NB_HOST]
+style = "bold fg:peach"
+format = '[⇄ $env_value ]($style)'
