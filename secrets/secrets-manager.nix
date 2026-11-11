@@ -1,5 +1,17 @@
 { config, pkgs, inputs, ... }:
 
+let
+  workUser = "da.smirnov";
+  # git credential helper для Bitbucket YADRO: берёт WORK_USER/WORK_PASS из env,
+  # а если env не подхвачен (GUI/IDE) — читает секрет напрямую.
+  bbCredHelper = pkgs.writeShellScript "git-credential-yadro-bb" ''
+    [ "$1" = get ] || exit 0
+    pass="''${WORK_PASS:-$(cat ${config.age.secrets.workpass.path} 2>/dev/null)}"
+    [ -n "$pass" ] || exit 0
+    echo "username=''${WORK_USER:-${workUser}}"
+    echo "password=$pass"
+  '';
+in
 {
   imports = [ inputs.agenix.nixosModules.default ];
 
@@ -52,6 +64,15 @@
 		};
   };
 
+  # Системный /etc/gitconfig: для b.yadro.com логин/пароль подставляются автоматически.
+  programs.git = {
+    enable = true;
+    config.credential."https://b.yadro.com" = {
+      helper = "${bbCredHelper}";
+      username = workUser;
+    };
+  };
+
   environment.systemPackages = [
     inputs.agenix.packages."${pkgs.system}".default
   ];
@@ -60,6 +81,7 @@
 		export FREE_PORT_PASS=$(cat ${config.age.secrets.freeportpass.path} 2>/dev/null)
 		export GH_TOKEN=$(cat ${config.age.secrets.github_token.path} 2>/dev/null)
 		export WORK_PASS=$(cat ${config.age.secrets.workpass.path} 2>/dev/null)
+		export WORK_USER=${workUser}
 		export SSH_PASS=$(cat ${config.age.secrets.password.path} 2>/dev/null)
 		export GITLAB_TOKEN=$(cat ${config.age.secrets.gitlab_token.path} 2>/dev/null)
 		export TS_AUTHKEY=$(cat ${config.age.secrets.tailscale_authkey.path} 2>/dev/null)
