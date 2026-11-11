@@ -164,6 +164,12 @@
     max-jobs = 4;
   };
 
+  # nh: `nh os switch` — rebuild с деревом сборки и diff пакетов
+  programs.nh = {
+    enable = true;
+    flake = "/etc/nixos";
+  };
+
 
   # Configure keymap in X11
   # services.xserver.xkb.layout = "us";

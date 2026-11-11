@@ -36,6 +36,7 @@
     ./tools/claude-notify
     ./tools/claude-skills.nix
     ./tools/shell.nix
+    ./tools/git.nix
     ./tools/activity
     ./desktop/starship/starship.nix
     ./desktop/noctalia/noctalia.nix
