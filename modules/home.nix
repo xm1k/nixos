@@ -33,7 +33,8 @@
 		./tools/work.nix
     ./tools/vault.nix
     ./tools/commands.nix
-    ./tools/claude-notify.nix
+    ./tools/claude-notify
+    ./tools/claude-skills.nix
     ./tools/shell.nix
     ./tools/activity
     ./desktop/starship/starship.nix
