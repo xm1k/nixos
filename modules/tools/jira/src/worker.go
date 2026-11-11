@@ -70,6 +70,9 @@ func runNow(op *Op) error {
 	if err != nil {
 		return err
 	}
+	if op.Kind == "create" {
+		op.Key = d.Key // for the caller: create --switch
+	}
 	if op.Kind != "sync" {
 		fmt.Printf("%s %s: %s\n", green("✓"), bold(d.Key), d.Result)
 		_ = enqueue(&Op{Kind: "sync"})

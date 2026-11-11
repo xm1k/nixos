@@ -27,7 +27,7 @@ func main() {
 		Args:          cobra.NoArgs,
 		RunE:          func(*cobra.Command, []string) error { return printList(false, "") },
 	}
-	root.AddCommand(listCmd(), currentCmd(), createCmd(), moveCmd(), setCmd(), commentCmd(), viewCmd(),
+	root.AddCommand(listCmd(), currentCmd(), createCmd(), moveCmd(), switchCmd(), doneCmd(), setCmd(), commentCmd(), viewCmd(),
 		epicsCmd(), reportCmd(), queueCmd(), syncCmd(), initCmd(),
 		&cobra.Command{Use: "__worker", Hidden: true, RunE: func(*cobra.Command, []string) error { return runWorker() }})
 	if err := root.Execute(); err != nil {

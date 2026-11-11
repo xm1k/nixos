@@ -104,3 +104,31 @@ func TestReportPeriod(t *testing.T) {
 		t.Error("formatDuration")
 	}
 }
+
+func TestSwitch(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	spawnWorker = func() error { return nil }
+	c := testCache()
+	c.Issues = []Item{
+		{Key: "RE-1", Status: "In Progress", Type: "Task"},
+		{Key: "RE-2", Status: "Open", Type: "Task"},
+	}
+	if err := saveCache(c); err != nil {
+		t.Fatal(err)
+	}
+	moves := func() (out []string) {
+		for _, op := range loadQueue().Pending {
+			out = append(out, op.Key+">"+op.Target)
+		}
+		return out
+	}
+	_ = switchTo("RE-1", false) // already there: nothing to do
+	if m := moves(); len(m) != 0 {
+		t.Errorf("switch to current = %v", m)
+	}
+	_ = switchTo("@7", false)
+	if m, want := moves(), []string{"RE-1>Pending", "@7>In Progress"}; !slices.Equal(m, want) {
+		t.Errorf("moves = %v, want %v", m, want)
+	}
+}

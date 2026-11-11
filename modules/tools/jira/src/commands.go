@@ -161,7 +161,7 @@ func currentCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "current",
 		Aliases: []string{"cur"},
-		Short:   "Тикет (не эпик), который сейчас в In Progress",
+		Short:   "Ключ тикета (не эпика) в In Progress, напр. RE-123",
 		Args:    cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error {
 			if err := syncFirst(sync); err != nil {
@@ -169,17 +169,16 @@ func currentCmd() *cobra.Command {
 			}
 			issues := inProgress(loadCache())
 			if len(issues) == 0 {
-				fmt.Println(dim("нет задач в In Progress"))
+				fmt.Fprintln(os.Stderr, dim("нет задач в In Progress"))
 			}
-			w := table()
 			for i, is := range issues {
 				if !verbose {
-					fmt.Fprintf(w, "%s\t%s\t%s\n", idLabel(is.ID), dim(is.Key), is.Summary)
+					fmt.Println(is.Key)
 				} else if err := showIssue(is.Key, 0, i > 0); err != nil {
 					return err
 				}
 			}
-			return w.Flush()
+			return nil
 		},
 	}
 	cmd.Flags().BoolVarP(&sync, "sync", "s", false, "сначала обновить кэш (ждать Jira)")
@@ -291,13 +290,14 @@ func askEpic(special ...[2]string) (string, error) {
 
 func createCmd() *cobra.Command {
 	var n NewIssue
-	var wait, noAsk bool
+	var wait, noAsk, doSwitch bool
 	cmd := &cobra.Command{
 		Use:     "create [заголовок] [описание...]",
 		Aliases: []string{"c", "new"},
 		Short:   "Создать задачу на себя (в фоне); спросит оценку и эпик",
 		Example: `  jira create "Починить логин" "После деплоя 500 на /login"
   jira create "Починить логин" -E 4h --epic 12
+  jira create "Починить логин" --switch   # и сразу в In Progress
   git log -1 --format=%B | jira create "Из коммита" -d -`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadConfig()
@@ -341,7 +341,14 @@ func createCmd() *cobra.Command {
 					}
 				}
 			}
-			return submit(&Op{Kind: "create", Issue: &n}, wait)
+			op := &Op{Kind: "create", Issue: &n}
+			if err := submit(op, wait); err != nil || !doSwitch {
+				return err
+			}
+			if !wait { // queued: the move goes after the create and finds the key by @id
+				op.Key = "@" + strconv.Itoa(op.ID)
+			}
+			return switchTo(op.Key, wait)
 		},
 	}
 	f := cmd.Flags()
@@ -352,6 +359,7 @@ func createCmd() *cobra.Command {
 	f.StringVar(&n.Epic, "epic", "", "эпик: номер или ключ")
 	f.BoolVarP(&wait, "wait", "w", false, "дождаться ответа Jira, без очереди")
 	f.BoolVarP(&noAsk, "no-ask", "y", false, "не спрашивать оценку и эпик")
+	f.BoolVarP(&doSwitch, "switch", "S", false, "сразу взять в работу (jira switch)")
 	_ = cmd.RegisterFlagCompletionFunc("epic", completeEpics)
 	return cmd
 }
@@ -400,25 +408,132 @@ func moveCmd() *cobra.Command {
 			if i, err := strconv.Atoi(target); err == nil && i >= 1 && i <= len(cache.Columns) {
 				target = cache.Columns[i-1].Name
 			}
-			if comment, err = textArg(comment); err != nil {
+			if comment, err = moveComment(cache, key, target, comment); err != nil {
 				return err
-			}
-			if comment == "" && cache.closing(target) {
-				if !interactive() {
-					return fmt.Errorf("перенос в «%s» требует комментария: -c \"что сделано\"", target)
-				}
-				if comment, err = askText(key + " → " + target + ": комментарий обязателен (что сделано)"); err != nil {
-					return err
-				}
-				if comment == "" {
-					return errors.New("без комментария перенос в «" + target + "» отменён")
-				}
 			}
 			return submit(&Op{Kind: "move", Key: key, Target: target, Comment: comment}, wait)
 		},
 	}
 	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "дождаться ответа Jira, без очереди")
 	cmd.Flags().StringVarP(&comment, "comment", "c", "", "комментарий после переноса ('-' — из stdin)")
+	return cmd
+}
+
+// moveComment reads the -c text ('-' = stdin); a move into a closing column
+// requires one, asked for when interactive.
+func moveComment(cache *Cache, key, target, comment string) (string, error) {
+	comment, err := textArg(comment)
+	if err != nil || comment != "" || !cache.closing(target) {
+		return comment, err
+	}
+	if !interactive() {
+		return "", fmt.Errorf("перенос в «%s» требует комментария: -c \"что сделано\"", target)
+	}
+	if comment, err = askText(key + " → " + target + ": комментарий обязателен (что сделано)"); err != nil {
+		return "", err
+	}
+	if comment == "" {
+		return "", errors.New("без комментария перенос в «" + target + "» отменён")
+	}
+	return comment, nil
+}
+
+// Board columns used by switch and done.
+const (
+	pendingColumn  = "Pending"
+	progressColumn = "In Progress"
+	doneColumn     = "Done"
+)
+
+// switchTo puts key into In Progress; whatever else is there goes to Pending.
+func switchTo(key string, wait bool) error {
+	cur := inProgress(loadCache())
+	for _, is := range cur {
+		if is.Key != key {
+			if err := submit(&Op{Kind: "move", Key: is.Key, Target: pendingColumn}, wait); err != nil {
+				return err
+			}
+		}
+	}
+	if containsKey(cur, key) {
+		fmt.Println(dim(key + " уже в " + progressColumn))
+		return nil
+	}
+	return submit(&Op{Kind: "move", Key: key, Target: progressColumn}, wait)
+}
+
+func switchCmd() *cobra.Command {
+	var wait bool
+	cmd := &cobra.Command{
+		Use:     "switch [задача]",
+		Aliases: []string{"sw"},
+		Short:   "Взять задачу в работу (In Progress), текущую — в Pending (в фоне)",
+		Example: `  jira switch          # выбрать задачу
+  jira switch 3
+  jira switch 48268    # RE-48268`,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completeIssues,
+		RunE: func(_ *cobra.Command, args []string) error {
+			key, err := issueArg(args, "Какую задачу взять в работу?")
+			if err != nil {
+				return err
+			}
+			return switchTo(key, wait)
+		},
+	}
+	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "дождаться ответа Jira, без очереди")
+	return cmd
+}
+
+// currentKey returns the issue in In Progress, asking when there are several.
+func currentKey(header string) (string, error) {
+	cur := inProgress(loadCache())
+	switch {
+	case len(cur) == 0:
+		return "", errors.New("нет задач в " + progressColumn + ": укажите задачу")
+	case len(cur) == 1:
+		return cur[0].Key, nil
+	case !interactive():
+		return "", errors.New("в " + progressColumn + " несколько задач: укажите задачу")
+	}
+	options := make([]string, len(cur))
+	for i, is := range cur {
+		options[i] = fmt.Sprintf("%d  %s  %s", is.ID, is.Key, is.Summary)
+	}
+	i, err := choose(header, options)
+	if err != nil {
+		return "", err
+	}
+	return cur[i].Key, nil
+}
+
+func doneCmd() *cobra.Command {
+	var wait bool
+	var comment string
+	cmd := &cobra.Command{
+		Use:   "done [задача]",
+		Short: "Перенести задачу (по умолчанию текущую из In Progress) в Done с комментарием (в фоне)",
+		Example: `  jira done -c "Выкатили"     # текущую задачу (jira cur)
+  jira done                   # спросит комментарий
+  jira done 3 -c -            # комментарий из stdin`,
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completeIssues,
+		RunE: func(_ *cobra.Command, args []string) error {
+			var key string
+			var err error
+			if len(args) > 0 {
+				key = issueKey(args[0])
+			} else if key, err = currentKey("Какую задачу закрыть?"); err != nil {
+				return err
+			}
+			if comment, err = moveComment(loadCache(), key, doneColumn, comment); err != nil {
+				return err
+			}
+			return submit(&Op{Kind: "move", Key: key, Target: doneColumn, Comment: comment}, wait)
+		},
+	}
+	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "дождаться ответа Jira, без очереди")
+	cmd.Flags().StringVarP(&comment, "comment", "c", "", "комментарий: что сделано ('-' — из stdin)")
 	return cmd
 }
 

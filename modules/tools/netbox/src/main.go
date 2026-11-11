@@ -26,6 +26,7 @@ import (
 const usage = `netbox — поиск хостов из NetBox-инвентаря и ssh без пароля (пароль из $WORK_PASS).
 
   netbox [ssh] [-n] [-u user] <запрос...> [-- команда]   зайти под sudo -i (-n без sudo)
+  --infra (у ssh/exec)                                   под пользователем infra, пароль из $INFRA_PASS
   netbox ls [-s] [запрос...]                             найти хосты (-s только имена)
   netbox show <запрос...>                                переменные хоста
   netbox exec [-y] [-u user] <запрос...> -- команда      команда на всех найденных
@@ -39,6 +40,7 @@ const usage = `netbox — поиск хостов из NetBox-инвентаря
 var (
 	snapshotURL = env("NB_SNAPSHOT_URL", "https://artifactory-nn.atmosphere.yadro.com/artifactory/re-infra-misc/inventory/inventory_latest.yaml")
 	cacheFile   = filepath.Join(check(os.UserCacheDir()), "netbox-cli", "hosts.json")
+	passVar     = "WORK_PASS" // переменная окружения с паролем (--infra -> INFRA_PASS)
 )
 
 type Host struct {
@@ -56,7 +58,7 @@ type node struct {
 func main() {
 	if os.Getenv("NB_ASKPASS") != "" { // ssh вызывает нас как SSH_ASKPASS
 		if p := strings.ToLower(strings.Join(os.Args[1:], " ")); !strings.Contains(p, "yes/no") && !strings.Contains(p, "passphrase") {
-			fmt.Println(os.Getenv("WORK_PASS"))
+			fmt.Println(os.Getenv(os.Getenv("NB_ASKPASS")))
 			return
 		}
 		os.Exit(1)
@@ -84,6 +86,8 @@ func main() {
 	user := env("WORK_ADMIN_USER", os.Getenv("USER"))
 	for i := 0; i < len(args); i++ {
 		switch a := args[i]; {
+		case a == "--infra":
+			user, passVar = "infra", "INFRA_PASS"
 		case a == "-u" && i+1 < len(args):
 			i++
 			user = args[i]
@@ -313,11 +317,11 @@ func sshArgs(h Host, user string, opts ...string) []string {
 }
 
 func sshEnv() []string {
-	if os.Getenv("WORK_PASS") == "" {
-		fmt.Fprintln(os.Stderr, "netbox: WORK_PASS пуст — ssh спросит пароль сам")
+	if os.Getenv(passVar) == "" {
+		fmt.Fprintf(os.Stderr, "netbox: %s пуст — ssh спросит пароль сам\n", passVar)
 		return os.Environ()
 	}
-	return append(os.Environ(), "SSH_ASKPASS="+check(os.Executable()), "SSH_ASKPASS_REQUIRE=force", "NB_ASKPASS=1")
+	return append(os.Environ(), "SSH_ASKPASS="+check(os.Executable()), "SSH_ASKPASS_REQUIRE=force", "NB_ASKPASS="+passVar)
 }
 
 // sudo запускает ssh в pty и один раз отвечает паролем на промпт sudo (маркер NBSUDO:).
@@ -344,7 +348,7 @@ func sudo(args []string) int {
 		if bytes.Contains(chunk, marker) {
 			chunk = bytes.ReplaceAll(chunk, marker, []byte("[sudo] password: "))
 			if !sent { // неверный пароль не повторяем — дальше вводится руками
-				f.WriteString(os.Getenv("WORK_PASS") + "\n")
+				f.WriteString(os.Getenv(passVar) + "\n")
 				sent = true
 			}
 		}
