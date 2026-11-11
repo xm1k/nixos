@@ -18,6 +18,7 @@
       ../../modules/tools/kilo.nix
       ../../modules/tools/jira
       ../../modules/tools/netbox
+      ../../modules/tools/bmusic
     ];
 
 

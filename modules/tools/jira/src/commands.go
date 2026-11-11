@@ -157,7 +157,7 @@ func inProgress(cache *Cache) []Item {
 }
 
 func currentCmd() *cobra.Command {
-	var sync, verbose bool
+	var sync, verbose, long bool
 	cmd := &cobra.Command{
 		Use:     "current",
 		Aliases: []string{"cur"},
@@ -172,15 +172,21 @@ func currentCmd() *cobra.Command {
 				fmt.Fprintln(os.Stderr, dim("нет задач в In Progress"))
 			}
 			for i, is := range issues {
-				if !verbose {
+				switch {
+				case long:
+					fmt.Printf("%s  %s\n", is.Key, is.Summary)
+				case !verbose:
 					fmt.Println(is.Key)
-				} else if err := showIssue(is.Key, 0, i > 0); err != nil {
-					return err
+				default:
+					if err := showIssue(is.Key, 0, i > 0); err != nil {
+						return err
+					}
 				}
 			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVarP(&long, "long", "l", false, "ключ и название тикета")
 	cmd.Flags().BoolVarP(&sync, "sync", "s", false, "сначала обновить кэш (ждать Jira)")
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "подробно, из Jira")
 	return cmd
@@ -212,10 +218,28 @@ func epicsCmd() *cobra.Command {
 
 // ---- pickers --------------------------------------------------------------------
 
+// isCurrent reports whether arg means the issue in In Progress: `jira move cur done`.
+func isCurrent(arg string) bool {
+	switch strings.ToLower(strings.TrimSpace(arg)) {
+	case "cur", "current":
+		return true
+	}
+	return false
+}
+
+// keyArg resolves an issue argument: "cur" (the issue in In Progress), a
+// number from jira list or a key.
+func keyArg(arg, header string) (string, error) {
+	if isCurrent(arg) {
+		return currentKey(header)
+	}
+	return issueKey(arg), nil
+}
+
 // issueArg takes the issue from args[0] or lets me pick one.
 func issueArg(args []string, header string) (string, error) {
 	if len(args) > 0 {
-		return issueKey(args[0]), nil
+		return keyArg(args[0], header)
 	}
 	if !interactive() {
 		return "", errors.New("укажите задачу: номер из jira list или ключ")
@@ -374,6 +398,7 @@ func moveCmd() *cobra.Command {
 		Example: `  jira move                  # выбрать задачу, затем колонку
   jira move 3 in progress    # по имени колонки, статуса или перехода
   jira move 3 2              # во вторую колонку доски
+  jira move cur pending      # текущую задачу (jira cur)
   jira move 3 done -c "Выкатили"   # в закрывающую колонку — с комментарием`,
 		ValidArgsFunction: completeMove,
 		RunE: func(_ *cobra.Command, args []string) error {
@@ -519,11 +544,12 @@ func doneCmd() *cobra.Command {
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: completeIssues,
 		RunE: func(_ *cobra.Command, args []string) error {
-			var key string
-			var err error
+			arg := "cur"
 			if len(args) > 0 {
-				key = issueKey(args[0])
-			} else if key, err = currentKey("Какую задачу закрыть?"); err != nil {
+				arg = args[0]
+			}
+			key, err := keyArg(arg, "Какую задачу закрыть?")
+			if err != nil {
 				return err
 			}
 			if comment, err = moveComment(loadCache(), key, doneColumn, comment); err != nil {
@@ -857,7 +883,7 @@ func completeIssues(_ *cobra.Command, args []string, _ string) ([]string, cobra.
 			open = append(open, is)
 		}
 	}
-	return completions(open), cobra.ShellCompDirectiveNoFileComp
+	return append([]string{"cur\tтекущая задача из In Progress"}, completions(open)...), cobra.ShellCompDirectiveNoFileComp
 }
 
 func completeEpics(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {

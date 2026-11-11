@@ -132,3 +132,11 @@ func TestSwitch(t *testing.T) {
 		t.Errorf("moves = %v, want %v", m, want)
 	}
 }
+
+func TestIsCurrent(t *testing.T) {
+	for arg, want := range map[string]bool{"cur": true, "CUR": true, " current ": true, "3": false, "RE-1": false, "curr": false} {
+		if got := isCurrent(arg); got != want {
+			t.Errorf("isCurrent(%q) = %v, want %v", arg, got, want)
+		}
+	}
+}

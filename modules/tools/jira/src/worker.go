@@ -75,7 +75,10 @@ func runNow(op *Op) error {
 	}
 	if op.Kind != "sync" {
 		fmt.Printf("%s %s: %s\n", green("✓"), bold(d.Key), d.Result)
-		_ = enqueue(&Op{Kind: "sync"})
+		cache := loadCache()
+		patchIssues(c, cache, []string{d.Key})
+		_ = saveCache(cache)
+		_ = enqueue(&Op{Kind: "sync", Key: d.Key})
 	}
 	if d.Warn != "" {
 		fmt.Fprintln(os.Stderr, yellow("не всё получилось:"), d.Warn)
@@ -105,7 +108,7 @@ func drain() (stop bool) {
 		log.Print(err)
 		return true
 	}
-	changed := false
+	var touched []string // keys changed by the ops: re-read after the sync
 	for {
 		q := loadQueue()
 		if len(q.Pending) == 0 {
@@ -135,10 +138,12 @@ func drain() (stop bool) {
 			log.Print(err)
 			return true
 		}
-		changed = op.Kind != "sync"
+		if err == nil && op.Kind != "sync" && d.Key != "" {
+			touched = append(touched, d.Key)
+		}
 	}
-	if changed { // so that `list` shows the new state
-		if err := doSync(c); err != nil {
+	if len(touched) > 0 { // so that `list` shows the new state
+		if err := doSync(c, touched...); err != nil {
 			log.Print("обновление кэша: ", err)
 		}
 	}
@@ -167,7 +172,7 @@ func resolveRef(ref string) (string, error) {
 func execute(c *Client, op *Op) (d Done, err error) {
 	switch op.Kind {
 	case "sync":
-		return d, doSync(c)
+		return d, doSync(c, op.Key) // Key: the issue runNow just changed
 	case "create":
 		n := *op.Issue
 		if n.Epic, err = resolveRef(n.Epic); err != nil {
@@ -216,8 +221,10 @@ func execute(c *Client, op *Op) (d Done, err error) {
 	return d, err
 }
 
-// doSync refreshes the cache: my recent issues, my open epics, board columns, statuses.
-func doSync(c *Client) error {
+// doSync refreshes the cache: my recent issues, my open epics, board columns,
+// statuses. The search index lags behind transitions, so the issues in fresh
+// (just changed) are re-read directly.
+func doSync(c *Client, fresh ...string) error {
 	const mine = "assignee = currentUser() AND "
 	fields := []string{"summary", "status", "issuetype"}
 	scope := mine + "(statusCategory != Done OR updated >= -14d)"
@@ -246,7 +253,39 @@ func doSync(c *Client) error {
 		cache.Statuses[s.ID], cache.StatusCategories[s.ID] = s.Name, s.StatusCategory.Key
 	}
 	cache.Issues, cache.Epics = toItems(issues), toItems(epics)
+	patchIssues(c, cache, append(fresh, recentlyChanged(10*time.Minute)...))
 	return saveCache(cache)
+}
+
+// patchIssues overwrites the cached state of keys with a direct read
+// (unlike search, not subject to index lag); a failed read keeps what is there.
+func patchIssues(c *Client, cache *Cache, keys []string) {
+	seen := map[string]bool{"": true}
+	for _, key := range keys {
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		is, err := c.issue(key, "summary", "status", "issuetype")
+		if err != nil {
+			log.Printf("%s: %v", key, err)
+			continue
+		}
+		fresh, found := toItems([]Issue{*is})[0], false
+		for _, it := range cache.items() {
+			if it.Key == key {
+				id := it.ID
+				*it, it.ID, found = fresh, id, true
+			}
+		}
+		if !found {
+			if cache.isEpic(fresh) {
+				cache.Epics = append(cache.Epics, fresh)
+			} else {
+				cache.Issues = append(cache.Issues, fresh)
+			}
+		}
+	}
 }
 
 func toItems(issues []Issue) []Item {
@@ -257,4 +296,15 @@ func toItems(issues []Issue) []Item {
 			Category: st.StatusCategory.Key, Type: is.Fields.IssueType.String()}
 	}
 	return out
+}
+
+// recentlyChanged returns the keys of issues changed by queue ops within d.
+func recentlyChanged(d time.Duration) []string {
+	var keys []string
+	for _, done := range doneLog() {
+		if time.Since(done.Time) < d {
+			keys = append(keys, done.Key)
+		}
+	}
+	return keys
 }
