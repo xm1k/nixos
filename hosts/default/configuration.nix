@@ -20,6 +20,7 @@
       ../../modules/tools/outlook
       ../../modules/tools/netbox
       ../../modules/tools/bmusic
+      ../../modules/tools/dns
     ];
 
 
