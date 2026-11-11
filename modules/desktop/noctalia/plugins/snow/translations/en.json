@@ -1,0 +1,6 @@
+{
+  "settings.max_flakes.label": "Snowflakes at level 10",
+  "settings.speed.label": "Fall speed",
+  "settings.opacity.label": "Opacity",
+  "settings.idle_seconds.label": "Idle seconds before snow comes in front of windows"
+}

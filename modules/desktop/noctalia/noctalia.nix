@@ -16,7 +16,33 @@
     gifski
     jq
     yt-dlp
+
+    # snow [0-10|front|back] - snow intensity for the xm1k/snow plugin
+    (writeShellScriptBin "snow" ''
+      state="''${NOCTALIA_STATE_HOME:-''${XDG_STATE_HOME:-$HOME/.local/state}/noctalia}/plugins/data/xm1k/snow/level"
+      ipc() { noctalia msg plugin xm1k/snow:ctl all "$@" >/dev/null; }
+      case "''${1:-}" in
+        "")
+          echo "snow: $(cat "$state" 2>/dev/null || echo 5)/10"
+          ;;
+        front|back)
+          ipc "$1"
+          ;;
+        *)
+          if [[ "$1" =~ ^([0-9]|10)$ ]]; then
+            ipc level "$1"
+          else
+            echo "usage: snow [0-10]   0 = calm, 10 = snowstorm" >&2
+            echo "       snow front|back   preview the idle effect" >&2
+            exit 1
+          fi
+          ;;
+      esac
+    '')
   ];
+
+  # Local plugins: $XDG_DATA_HOME/noctalia/plugins/<name> outranks all sources
+  xdg.dataFile."noctalia/plugins/snow".source = ./plugins/snow;
 
   services.cliphist.enable = true;
   services.kdeconnect.enable = true;
@@ -63,7 +89,7 @@
       };
 
       plugins = {
-        enabled = [ "noctalia/bongocat" ];
+        enabled = [ "noctalia/bongocat" "xm1k/snow" ];
         source  = [
           {
             enabled  = true;
