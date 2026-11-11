@@ -11,6 +11,15 @@ let
     echo "username=''${WORK_USER:-${workUser}}"
     echo "password=$pass"
   '';
+  ghUser = "xm1k";
+  # То же для GitHub: GH_USER/GH_TOKEN из env, иначе токен из секрета.
+  ghCredHelper = pkgs.writeShellScript "git-credential-github" ''
+    [ "$1" = get ] || exit 0
+    token="''${GH_TOKEN:-$(cat ${config.age.secrets.github_token.path} 2>/dev/null)}"
+    [ -n "$token" ] || exit 0
+    echo "username=''${GH_USER:-${ghUser}}"
+    echo "password=$token"
+  '';
 in
 {
   imports = [ inputs.agenix.nixosModules.default ];
@@ -71,6 +80,10 @@ in
       helper = "${bbCredHelper}";
       username = workUser;
     };
+    config.credential."https://github.com" = {
+      helper = "${ghCredHelper}";
+      username = ghUser;
+    };
   };
 
   environment.systemPackages = [
@@ -80,6 +93,7 @@ in
 	environment.extraInit = "
 		export FREE_PORT_PASS=$(cat ${config.age.secrets.freeportpass.path} 2>/dev/null)
 		export GH_TOKEN=$(cat ${config.age.secrets.github_token.path} 2>/dev/null)
+		export GH_USER=${ghUser}
 		export WORK_PASS=$(cat ${config.age.secrets.workpass.path} 2>/dev/null)
 		export WORK_USER=${workUser}
 		export SSH_PASS=$(cat ${config.age.secrets.password.path} 2>/dev/null)
