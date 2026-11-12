@@ -7,14 +7,16 @@ let
   discord = pkgs.discord.override {
     commandLineArgs = "--enable-features=WebRTCPipeWireCapturer";
   };
+  summon = import ../desktop/niri/summon.nix { inherit pkgs; };
 in
 {
   home.packages = [
     discord
-    # Запуск без привязки к терминалу (как telegram). hiPrio — чтобы
+    # Запуск «вместо» терминала: уже открытое окно переносится на место
+    # текущего, терминал закрывается (см. niri/summon.nix). hiPrio — чтобы
     # перекрыть bin/discord из самого пакета без коллизии.
     (lib.hiPrio (pkgs.writeShellScriptBin "discord" ''
-      setsid ${discord}/bin/discord "$@" > /dev/null 2>&1 &
+      exec ${lib.getExe summon} discord ${discord}/bin/discord "$@"
     ''))
   ];
 }

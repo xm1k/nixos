@@ -44,7 +44,7 @@
       export ALL_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
       export all_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
       echo "proxying..."
-      setsid ${pkgs.telegram-desktop}/bin/Telegram "$@" > /dev/null 2>&1 &
+      exec ${lib.getExe (import ../../modules/desktop/niri/summon.nix { inherit pkgs; })} org.telegram.desktop ${pkgs.telegram-desktop}/bin/Telegram "$@"
     '')
     ripgrep
     bubblewrap socat

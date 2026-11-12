@@ -15,5 +15,7 @@ in
       source = skillsDir + "/${name}";
       recursive = true;
     };
-  }) skills);
+  }) skills) // {
+    ".claude/CLAUDE.md".source = ../../claude/CLAUDE.md;
+  };
 }
