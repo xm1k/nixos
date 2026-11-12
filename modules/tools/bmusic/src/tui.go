@@ -17,9 +17,10 @@ import (
 // ---------- styles ----------
 
 var (
-	cAccent = lipgloss.AdaptiveColor{Light: "#c2185b", Dark: "#ff4f9a"}
+	// accent of the web player and the system
+	cAccent = lipgloss.AdaptiveColor{Light: "#2f7fb5", Dark: "#7ebae4"}
 	cDim    = lipgloss.AdaptiveColor{Light: "#7a7a7a", Dark: "#7c7c8a"}
-	cSel    = lipgloss.AdaptiveColor{Light: "#e8e0ef", Dark: "#2c2838"}
+	cSel    = lipgloss.AdaptiveColor{Light: "#dcebf6", Dark: "#1a2a36"}
 	cErr    = lipgloss.AdaptiveColor{Light: "#c62828", Dark: "#ff6b6b"}
 
 	sAccent = lipgloss.NewStyle().Foreground(cAccent)
@@ -670,9 +671,9 @@ func (m *model) key(k tea.KeyMsg) tea.Cmd {
 		return do("seek", Args{Value: "+10"})
 	case "left":
 		return do("seek", Args{Value: "-10"})
-	case "+", "=":
+	case "+", "=", "0":
 		return do("volume", Args{Value: "+5"})
-	case "-", "_":
+	case "-", "_", "9":
 		return do("volume", Args{Value: "-5"})
 	case "L", "*":
 		var t *Track
@@ -1000,7 +1001,7 @@ func (m *model) renderList(v *view, h int) []string {
 func helpLines() []string {
 	return strings.Split(`  Навигация   ↑↓/jk  pgup/pgdn  g/G   enter — играть/открыть   esc/h — назад
               tab, 1-6 — вкладки   / — поиск (f — тип)   ctrl+r — обновить
-  Плеер       space — пауза   n/p — след./пред.   ←/→ — ∓10с   +/- — громкость
+  Плеер       space — пауза   n/p — след./пред.   ←/→ — ∓10с   +/- или 9/0 — громкость
               r — повтор   s — перемешать   w — волна   m — режим волны
   Трек        * — ♥ текущему   L — ♥ выбранному   d — не нравится (текущий)
               a — в очередь   A — следующим   R — радио от трека   b — в мой альбом
@@ -1019,7 +1020,7 @@ func (m *model) renderNow() string {
 	}
 	icon := "▶"
 	if s.Paused {
-		icon = "⏸"
+		icon = "‖" // plain glyph: U+23F8 renders as a colour emoji
 	}
 	if s.Loading && s.Playing {
 		icon = "…"
@@ -1040,8 +1041,8 @@ func (m *model) renderNow() string {
 	if s.Shuffle {
 		flags = append(flags, "⤮")
 	}
-	flags = append(flags, fmt.Sprintf("♪ %.0f%%", s.Volume), fmt.Sprintf("%d/%d", s.Index+1, s.Length))
-	right := strings.Join(flags, "  ")
+	flags = append(flags, fmt.Sprintf("%d/%d", s.Index+1, s.Length))
+	right := strings.Join(flags, "  ") + "  " + volBar(s.Volume)
 	times := fmt.Sprintf(" %s / %s ", fmtTime(s.Pos), fmtTime(s.Dur))
 
 	barW := 24
@@ -1058,10 +1059,22 @@ func (m *model) renderNow() string {
 	fixed := lipgloss.Width(times) + barW + lipgloss.Width(right) + 3
 	room := m.w - fixed
 	if lipgloss.Width(left) > room {
-		left = " " + icon + " " + fit(s.Track.Label(), max(5, room-4))
+		left = " " + sAccent.Render(icon) + " " + fit(s.Track.Label(), max(5, room-4))
 	}
 	pad := max(1, m.w-lipgloss.Width(left)-fixed+1)
 	return left + strings.Repeat(" ", pad) + bar + times + sDim.Render(right)
+}
+
+// volBar: "♪ ▮▮▮▮▮▯▯▯ 60%" — 8 cells, each 12.5%; above 100% the overflow is shown in the accent colour.
+func volBar(v float64) string {
+	const cells = 8
+	n := min(cells, int(v/100*cells+0.5))
+	bar := sAccent.Render(strings.Repeat("▮", n)) + sDim.Render(strings.Repeat("▯", cells-n))
+	pct := sDim.Render(fmt.Sprintf(" %.0f%%", v))
+	if v > 100 {
+		pct = sAccent.Render(fmt.Sprintf(" %.0f%%", v))
+	}
+	return sDim.Render("♪ ") + bar + pct
 }
 
 func (m *model) renderFooter() string {
@@ -1077,5 +1090,5 @@ func (m *model) renderFooter() string {
 	if m.st != nil && m.st.Track != nil && m.st.Track.Reason != "" {
 		return " " + sDim.Render(fit("≋ "+m.st.Track.Reason, m.w-2))
 	}
-	return sDim.Render(fit(" ? — помощь   space — пауза   n/p — треки   w — волна   * — ♥   / — поиск   q — выход", m.w))
+	return sDim.Render(fit(" ? — помощь   space — пауза   n/p — треки   +/- — громкость   w — волна   * — ♥   / — поиск   q — выход", m.w))
 }
