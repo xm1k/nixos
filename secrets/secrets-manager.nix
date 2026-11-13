@@ -71,6 +71,11 @@ in
 			group = "users";
 			mode = "0400";
 		};
+		# Пароль Wi-Fi точки b.net (modules/tools/bnet-ap), читает только root
+		"bnet_ap" = {
+			file = ./bnet_ap.age;
+			mode = "0400";
+		};
   };
 
   # Системный /etc/gitconfig: для b.yadro.com логин/пароль подставляются автоматически.
