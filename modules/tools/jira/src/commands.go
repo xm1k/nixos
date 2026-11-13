@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
@@ -279,6 +280,29 @@ func askEstimate() (string, error) {
 	}
 }
 
+// askVersion picks the fix version for an issue outside an epic; "" leaves
+// it to the worker: the nearest open version.
+func askVersion() (string, error) {
+	vs := loadCache().Versions
+	if len(vs) == 0 {
+		fmt.Fprintln(os.Stderr, dim("версий нет в кэше (jira sync) — fix version будет ближайшая"))
+		return "", nil
+	}
+	options := make([]string, len(vs))
+	for i, v := range vs {
+		options[i] = v.Name
+		if v.ReleaseDate != "" {
+			options[i] += "  " + v.ReleaseDate
+		}
+	}
+	options[0] += "  (ближайшая)"
+	i, err := choose("Fix version (задача без эпика)", options)
+	if err != nil {
+		return "", err
+	}
+	return vs[i].Name, nil
+}
+
 // askEpic picks one of my epics; special options go first, after the last used epic.
 func askEpic(special ...[2]string) (string, error) {
 	epics, last := loadCache().Epics, lastEpic()
@@ -340,7 +364,7 @@ func createCmd() *cobra.Command {
 			}
 			if n.Summary == "" && interactive() {
 				if n.Summary, err = ask("Заголовок", "что сделать"); err == nil && n.Description == "" {
-					n.Description, err = askText("Описание (можно пустое)")
+					n.Description, err = askText("Описание (пустое — как заголовок)")
 				}
 				if err != nil {
 					return err
@@ -364,6 +388,11 @@ func createCmd() *cobra.Command {
 						return err
 					}
 				}
+				if n.Epic == "" && !cmd.Flags().Changed("fix-version") {
+					if n.FixVersion, err = askVersion(); err != nil {
+						return err
+					}
+				}
 			}
 			op := &Op{Kind: "create", Issue: &n}
 			if err := submit(op, wait); err != nil || !doSwitch {
@@ -381,10 +410,12 @@ func createCmd() *cobra.Command {
 	f.StringSliceVarP(&n.Labels, "label", "l", nil, "метки")
 	f.StringVarP(&n.Estimate, "estimate", "E", "", "original estimate: 30m, 2h, 1d 4h")
 	f.StringVar(&n.Epic, "epic", "", "эпик: номер или ключ")
+	f.StringVarP(&n.FixVersion, "fix-version", "V", "", "fix version, если без эпика (по умолчанию ближайшая)")
 	f.BoolVarP(&wait, "wait", "w", false, "дождаться ответа Jira, без очереди")
-	f.BoolVarP(&noAsk, "no-ask", "y", false, "не спрашивать оценку и эпик")
+	f.BoolVarP(&noAsk, "no-ask", "y", false, "не спрашивать оценку, эпик и версию")
 	f.BoolVarP(&doSwitch, "switch", "S", false, "сразу взять в работу (jira switch)")
 	_ = cmd.RegisterFlagCompletionFunc("epic", completeEpics)
+	_ = cmd.RegisterFlagCompletionFunc("fix-version", completeVersions)
 	return cmd
 }
 
@@ -414,7 +445,7 @@ func moveCmd() *cobra.Command {
 				}
 				header, cur := "Куда?", -1
 				if is := cache.find(key); is != nil {
-					header, cur = key+" ["+is.Status+"] — куда?", cache.columnOf(is.StatusID)
+					header, cur = issueLabel(cache, key)+" ["+is.Status+"] — куда?", cache.columnOf(is.StatusID)
 				}
 				var options []string
 				for i, col := range cache.Columns {
@@ -454,7 +485,7 @@ func moveComment(cache *Cache, key, target, comment string) (string, error) {
 	if !interactive() {
 		return "", fmt.Errorf("перенос в «%s» требует комментария: -c \"что сделано\"", target)
 	}
-	if comment, err = askText(key + " → " + target + ": комментарий обязателен (что сделано)"); err != nil {
+	if comment, err = askText(issueLabel(cache, key) + " → " + target + ": комментарий обязателен (что сделано)"); err != nil {
 		return "", err
 	}
 	if comment == "" {
@@ -481,7 +512,7 @@ func switchTo(key string, wait bool) error {
 		}
 	}
 	if containsKey(cur, key) {
-		fmt.Println(dim(key + " уже в " + progressColumn))
+		fmt.Println(dim(issueLabel(loadCache(), key) + " уже в " + progressColumn))
 		return nil
 	}
 	return submit(&Op{Kind: "move", Key: key, Target: progressColumn}, wait)
@@ -568,8 +599,8 @@ func setCmd() *cobra.Command {
 	var wait bool
 	cmd := &cobra.Command{
 		Use:               "set [задача]",
-		Short:             "Задать оценку и эпик задаче (в фоне); без флагов — спросит",
-		Example:           "  jira set 3 -E 4h --epic 12\n  jira set 3 --epic none   # убрать из эпика",
+		Short:             "Задать оценку, эпик, fix version задаче (в фоне); без флагов — спросит",
+		Example:           "  jira set 3 -E 4h --epic 12\n  jira set 3 --epic none   # убрать из эпика, fix version — ближайшая\n  jira set 3 -V 2.4.0",
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: completeIssues,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
@@ -582,9 +613,10 @@ func setCmd() *cobra.Command {
 			if op.Epic != noEpic {
 				op.Epic = issueKey(op.Epic)
 			}
-			if !cmd.Flags().Changed("estimate") && !cmd.Flags().Changed("epic") {
+			flags := cmd.Flags()
+			if !flags.Changed("estimate") && !flags.Changed("epic") && !flags.Changed("fix-version") {
 				if !interactive() {
-					return errors.New("укажите -E и/или --epic")
+					return errors.New("укажите -E, --epic и/или -V")
 				}
 				if op.Estimate, err = askEstimate(); err != nil {
 					return err
@@ -593,7 +625,12 @@ func setCmd() *cobra.Command {
 					return err
 				}
 			}
-			if op.Estimate == "" && op.Epic == "" {
+			if op.Epic == noEpic && !flags.Changed("fix-version") && interactive() {
+				if op.FixVersion, err = askVersion(); err != nil {
+					return err
+				}
+			}
+			if op.Estimate == "" && op.Epic == "" && op.FixVersion == "" {
 				fmt.Println(dim("нечего менять"))
 				return nil
 			}
@@ -601,7 +638,9 @@ func setCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&op.Estimate, "estimate", "E", "", "original estimate: 30m, 2h, 1d 4h")
-	cmd.Flags().StringVar(&op.Epic, "epic", "", "эпик: номер или ключ, none — убрать")
+	cmd.Flags().StringVar(&op.Epic, "epic", "", "эпик: номер или ключ, none — убрать (и задать fix version)")
+	cmd.Flags().StringVarP(&op.FixVersion, "fix-version", "V", "", "fix version (с --epic none по умолчанию ближайшая)")
+	_ = cmd.RegisterFlagCompletionFunc("fix-version", completeVersions)
 	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "дождаться ответа Jira, без очереди")
 	_ = cmd.RegisterFlagCompletionFunc("epic", completeEpics)
 	return cmd
@@ -624,7 +663,7 @@ func commentCmd() *cobra.Command {
 				if !interactive() {
 					return errors.New("нет текста: jira comment <задача> \"текст\"")
 				}
-				text, err = askText("Комментарий к " + key)
+				text, err = askText("Комментарий к " + issueLabel(loadCache(), key))
 			}
 			if err != nil {
 				return err
@@ -888,6 +927,14 @@ func completeIssues(_ *cobra.Command, args []string, _ string) ([]string, cobra.
 
 func completeEpics(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 	return completions(loadCache().Epics), cobra.ShellCompDirectiveNoFileComp
+}
+
+func completeVersions(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+	var out []string
+	for _, v := range loadCache().Versions {
+		out = append(out, v.Name+"\t"+cmp.Or(v.ReleaseDate, "без даты"))
+	}
+	return out, cobra.ShellCompDirectiveNoFileComp
 }
 
 func completeMove(cmd *cobra.Command, args []string, s string) ([]string, cobra.ShellCompDirective) {

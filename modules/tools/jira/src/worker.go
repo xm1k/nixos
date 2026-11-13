@@ -50,6 +50,11 @@ func enqueue(op *Op) error {
 
 // submit runs the op now (wait) or queues it and prints a line.
 func submit(op *Op, wait bool) error {
+	if op.Key != "" && op.Summary == "" {
+		if is := loadCache().find(op.Key); is != nil {
+			op.Summary = is.Summary
+		}
+	}
 	if wait {
 		return runNow(op)
 	}
@@ -74,7 +79,11 @@ func runNow(op *Op) error {
 		op.Key = d.Key // for the caller: create --switch
 	}
 	if op.Kind != "sync" {
-		fmt.Printf("%s %s: %s\n", green("✓"), bold(d.Key), d.Result)
+		title := ""
+		if op.Summary != "" {
+			title = " «" + op.Summary + "»"
+		}
+		fmt.Printf("%s %s%s: %s\n", green("✓"), bold(d.Key), title, d.Result)
 		cache := loadCache()
 		patchIssues(c, cache, []string{d.Key})
 		_ = saveCache(cache)
@@ -214,6 +223,19 @@ func execute(c *Client, op *Op) (d Done, err error) {
 			}
 			done = append(done, "эпик "+cmp.Or(epic, "убран"))
 		}
+		if op.FixVersion != "" || op.Epic == noEpic { // out of the epic: a fix version instead
+			v := op.FixVersion
+			if v == "" {
+				project, _, _ := strings.Cut(d.Key, "-")
+				if v, err = c.nearestVersion(project); err != nil {
+					return d, fmt.Errorf("fix version: %w", err)
+				}
+			}
+			if err = c.setFixVersion(d.Key, v); err != nil {
+				return d, fmt.Errorf("fix version: %w", err)
+			}
+			done = append(done, "fix version "+v)
+		}
 		d.Result = strings.Join(done, ", ")
 	default:
 		err = fmt.Errorf("неизвестная операция %q", op.Kind)
@@ -253,6 +275,12 @@ func doSync(c *Client, fresh ...string) error {
 		cache.Statuses[s.ID], cache.StatusCategories[s.ID] = s.Name, s.StatusCategory.Key
 	}
 	cache.Issues, cache.Epics = toItems(issues), toItems(epics)
+	if c.Project != "" {
+		if cache.Versions, err = c.versions(strings.ToUpper(c.Project)); err != nil {
+			log.Printf("версии %s: %v", c.Project, err)
+			cache.Versions = loadCache().Versions
+		}
+	}
 	patchIssues(c, cache, append(fresh, recentlyChanged(10*time.Minute)...))
 	return saveCache(cache)
 }

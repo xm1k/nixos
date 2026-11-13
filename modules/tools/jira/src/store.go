@@ -80,11 +80,29 @@ type Op struct {
 	ID             int
 	Kind           string    // create | move | set | comment | sync
 	Key            string    `json:",omitempty"` // issue key or @id of a queued create
+	Summary        string    `json:",omitempty"` // issue title, for display
 	Target         string    `json:",omitempty"` // move: column / status / transition
 	Comment        string    `json:",omitempty"` // comment text; move: added after the transition
 	Estimate, Epic string    `json:",omitempty"` // set
+	FixVersion     string    `json:",omitempty"` // set; with Epic none, "" is the nearest version
 	Issue          *NewIssue `json:",omitempty"` // create
 	Error          string    `json:",omitempty"` // last error
+}
+
+// issueLabel is key with the cached issue title: RE-1 «Title».
+func issueLabel(cache *Cache, key string) string {
+	if is := cache.find(key); is != nil && is.Summary != "" {
+		return key + " «" + clip(is.Summary, 50) + "»"
+	}
+	return key
+}
+
+// label is the issue key with its title, when known.
+func (o *Op) label() string {
+	if o.Summary == "" {
+		return o.Key
+	}
+	return o.Key + " «" + clip(o.Summary, 50) + "»"
 }
 
 func (o *Op) String() string {
@@ -92,12 +110,13 @@ func (o *Op) String() string {
 	case "create":
 		return "создать «" + o.Issue.Summary + "»"
 	case "move":
+		s := o.label() + " → " + o.Target
 		if o.Comment != "" {
-			return o.Key + " → " + o.Target + " (+комментарий)"
+			s += " (+комментарий)"
 		}
-		return o.Key + " → " + o.Target
+		return s
 	case "comment":
-		return o.Key + ": комментарий «" + clip(o.Comment, 40) + "»"
+		return o.label() + ": комментарий «" + clip(o.Comment, 40) + "»"
 	case "set":
 		var parts []string
 		if o.Estimate != "" {
@@ -108,7 +127,10 @@ func (o *Op) String() string {
 		} else if o.Epic != "" {
 			parts = append(parts, "эпик "+o.Epic)
 		}
-		return o.Key + ": " + strings.Join(parts, ", ")
+		if o.FixVersion != "" {
+			parts = append(parts, "fix version "+o.FixVersion)
+		}
+		return o.label() + ": " + strings.Join(parts, ", ")
 	}
 	return "обновить кэш"
 }
@@ -224,6 +246,7 @@ type Cache struct {
 	Statuses         map[string]string // status id → name
 	StatusCategories map[string]string // status id → new | indeterminate | done
 	Issues, Epics    []Item
+	Versions         []Version // open versions of default_project, the nearest first
 }
 
 func loadCache() *Cache {

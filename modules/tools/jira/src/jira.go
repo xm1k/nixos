@@ -213,7 +213,14 @@ type Column struct {
 // NewIssue is a queued create.
 type NewIssue struct {
 	Project, Type, Summary, Description, Estimate, Epic string
+	FixVersion                                          string `json:",omitempty"` // "" without epic: the nearest version
 	Labels                                              []string
+}
+
+// Version is a project version (fix version).
+type Version struct {
+	Name, ReleaseDate  string
+	Released, Archived bool `json:",omitempty"`
 }
 
 // ---- requests -----------------------------------------------------------------
@@ -308,6 +315,43 @@ func (c *Client) setEstimate(key, estimate string) error {
 		"timetracking": map[string]string{"originalEstimate": estimate}}}, nil)
 }
 
+// versions returns the project's open versions, the nearest release first
+// (versions without a date go last).
+func (c *Client) versions(project string) ([]Version, error) {
+	var all []Version
+	if err := c.do("GET", api+"/project/"+url.PathEscape(project)+"/versions", nil, &all); err != nil {
+		return nil, err
+	}
+	var open []Version
+	for _, v := range all {
+		if !v.Released && !v.Archived {
+			open = append(open, v)
+		}
+	}
+	sort.SliceStable(open, func(i, j int) bool {
+		a, b := open[i].ReleaseDate, open[j].ReleaseDate
+		return a != "" && (b == "" || a < b)
+	})
+	return open, nil
+}
+
+// nearestVersion is the fix version for an issue without an epic.
+func (c *Client) nearestVersion(project string) (string, error) {
+	vs, err := c.versions(project)
+	if err != nil {
+		return "", err
+	}
+	if len(vs) == 0 {
+		return "", fmt.Errorf("в проекте %s нет открытых версий", project)
+	}
+	return vs[0].Name, nil
+}
+
+func (c *Client) setFixVersion(key, version string) error {
+	return c.do("PUT", issuePath(key), map[string]any{"fields": map[string]any{
+		"fixVersions": []map[string]string{{"name": version}}}}, nil)
+}
+
 // setEpic moves an issue into the epic; "" takes it out of its epic.
 func (c *Client) setEpic(key, epic string) error {
 	return c.do("POST", agile+"/epic/"+cmp.Or(url.PathEscape(epic), "none")+"/issue",
@@ -315,15 +359,25 @@ func (c *Client) setEpic(key, epic string) error {
 }
 
 // create creates the issue and assigns it to me; failures after the issue
-// exists (assignee, estimate, epic) are warnings.
+// exists (assignee, estimate, epic) are warnings. Jira handles issues without
+// a description or a fix version badly: an empty description repeats the
+// summary, an issue outside an epic gets a fix version (the nearest one
+// unless given, also when moving it into the epic fails).
 func (c *Client) create(n NewIssue) (key string, warns []string, err error) {
 	fields := map[string]any{
-		"project":   map[string]string{"key": n.Project},
-		"issuetype": map[string]string{"name": cmp.Or(n.Type, "Task")},
-		"summary":   n.Summary,
+		"project":     map[string]string{"key": n.Project},
+		"issuetype":   map[string]string{"name": cmp.Or(n.Type, "Task")},
+		"summary":     n.Summary,
+		"description": cmp.Or(strings.TrimSpace(n.Description), n.Summary),
 	}
-	if n.Description != "" {
-		fields["description"] = n.Description
+	var versionErr error // no version to set: create anyway, warn after
+	if n.Epic == "" && n.FixVersion == "" {
+		if n.FixVersion, versionErr = c.nearestVersion(n.Project); transient(versionErr) {
+			return "", nil, versionErr
+		}
+	}
+	if n.Epic == "" && n.FixVersion != "" {
+		fields["fixVersions"] = []map[string]string{{"name": n.FixVersion}}
 	}
 	if len(n.Labels) > 0 {
 		fields["labels"] = n.Labels
@@ -337,6 +391,7 @@ func (c *Client) create(n NewIssue) (key string, warns []string, err error) {
 			warns = append(warns, what+": "+err.Error())
 		}
 	}
+	warn("fix version", versionErr)
 	me, err := c.myself()
 	if err == nil {
 		err = c.do("PUT", issuePath(r.Key)+"/assignee", map[string]string{"name": me.Name}, nil)
@@ -346,7 +401,17 @@ func (c *Client) create(n NewIssue) (key string, warns []string, err error) {
 		warn("оценка", c.setEstimate(r.Key, n.Estimate))
 	}
 	if n.Epic != "" {
-		warn("эпик", c.setEpic(r.Key, n.Epic))
+		if err := c.setEpic(r.Key, n.Epic); err != nil {
+			warn("эпик", err)
+			v := n.FixVersion
+			if v == "" {
+				v, err = c.nearestVersion(n.Project)
+			}
+			if err == nil {
+				err = c.setFixVersion(r.Key, v)
+			}
+			warn("fix version вместо эпика", err)
+		}
 	}
 	return r.Key, warns, nil
 }
