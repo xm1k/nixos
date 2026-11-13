@@ -11,4 +11,5 @@ in
 	"tailscale_authkey.age".publicKeys = [ xm1k ];
 	"kilo_config.age".publicKeys = [ xm1k ];
 	"work_env.age".publicKeys = [ xm1k ];
+	"bnet_ap.age".publicKeys = [ xm1k ];
 }

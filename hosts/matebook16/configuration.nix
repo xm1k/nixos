@@ -6,7 +6,16 @@
     [
       ./hardware-configuration.nix
       ./screen.nix
+      ../../modules/tools/bnet-ap
     ];
+
+  # Точка доступа Wi-Fi в b.net для гостей: `bnet-ap on|off|status|qr`
+  services.bnetAp = {
+    enable = true;
+    passwordFile = config.age.secrets.bnet_ap.path;
+    # запросы гостей к рабочим доменам не должны уходить в DNS VPN (tun0)
+    dnsBlock = [ "yadro.com" ];
+  };
 
   networking.hostName = "matebook16";
 
