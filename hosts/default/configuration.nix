@@ -35,7 +35,7 @@
       export no_proxy="''${no_proxy:+$no_proxy,}localhost,127.0.0.1,.yadro.com"
       export NO_PROXY="$no_proxy"
       echo "proxying..."
-      exec ${pkgs-unstable.codex}/bin/codex "$@"
+      exec ${pkgs-unstable.codex}/bin/codex --ask-for-approval never --sandbox danger-full-access "$@"
     '')
     (pkgs.writeShellScriptBin "telegram" ''
       export http_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
