@@ -26,17 +26,16 @@
 
 
   environment.systemPackages = with pkgs; [
-    (pkgs.writeShellScriptBin "claude" ''
+    pkgs-unstable.claude-code
+    (pkgs.writeShellScriptBin "codex" ''
       export http_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
       export HTTPS_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
       export ALL_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
       export all_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
-      # Внутренние сервисы (Jira, Exchange, Vault…) доступны напрямую через VPN,
-      # через прокси HTTPS до них не проходит.
       export no_proxy="''${no_proxy:+$no_proxy,}localhost,127.0.0.1,.yadro.com"
       export NO_PROXY="$no_proxy"
       echo "proxying..."
-      exec ${pkgs-unstable.claude-code}/bin/claude "$@"
+      exec ${pkgs-unstable.codex}/bin/codex "$@"
     '')
     (pkgs.writeShellScriptBin "telegram" ''
       export http_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
