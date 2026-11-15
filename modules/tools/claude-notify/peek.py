@@ -34,6 +34,7 @@ from gi.repository import GLib, Pango, PangoCairo  # noqa: E402
 
 FONT = "JetBrainsMono Nerd Font"  # как в Alacritty
 
+BLUE = (108 / 255, 182 / 255, 240 / 255)  # #6CB6F0 — Codex berry
 ORANGE = (0.843, 0.467, 0.341)  # #D77757 — цвет Claude Code
 CREAM = (0.93, 0.91, 0.88)
 DIM = (0.60, 0.58, 0.56)
@@ -63,6 +64,20 @@ SPRITE = [
     "....X.X....X.X....",
     "....X.X....X.X....",
 ]
+# Точная пиксельная форма из berry_ecosystem/gitops/codex/static/codex.svg.
+# Глаза — прозрачные прорези, как в оригинале и berry TUI Codex.
+CODEX_SPRITE = [
+    "....XXXXXXXXXX....",
+    "....XXXXXXXXXX....",
+    "..XXX.XXXXXX.XXX..",
+    "..XXX.XXXXXX.XXX..",
+    ".XXXXXXXXXXXXXXXX.",
+    ".XXXXXXXXXXXXXXXX.",
+    "..XXXXXXXXXXXXXX..",
+    "..XXXXXXXXXXXXXX..",
+    "....XX......XX....",
+    "....XX......XX....",
+]
 P = 5  # размер пикселя маскота; высота = высоте плашки
 INK = (0.08, 0.07, 0.07)
 CW, CH = len(SPRITE[0]) * P, len(SPRITE) * P
@@ -89,16 +104,18 @@ def ease(x):
 
 
 class Scene:
-    def __init__(self, project, detail):
+    def __init__(self, project, detail, agent="claude"):
+        self.sprite = CODEX_SPRITE if agent == "codex" else SPRITE
+        self.accent = BLUE if agent == "codex" else ORANGE
+        self.mark_color = "#6CB6F0" if agent == "codex" else "#D77757"
         detail = detail.lstrip("✳✶✻✽✢·*⠀⠁⠂⠄⡀⢀⠠⠐⠈ \t")
         cr = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1))
         max_w = BW - 2 * PAD - 2 * BORDER
-        self.lines = [self._layout(cr, f"{project or 'claude'} — готово", 13, True, max_w, CREAM, mark=True)]
+        self.lines = [self._layout(cr, f"{project or agent} — {'Codex: ' if agent == 'codex' else ''}готово", 13, True, max_w, CREAM, mark=True)]
         if detail:
             self.lines.append(self._layout(cr, detail, 11.5, False, max_w, DIM))
 
-    @staticmethod
-    def _layout(cr, text, px, bold, width, color, mark=False):
+    def _layout(self, cr, text, px, bold, width, color, mark=False):
         layout = PangoCairo.create_layout(cr)
         fo = cairo.FontOptions()
         fo.set_antialias(cairo.ANTIALIAS_GRAY)
@@ -110,7 +127,7 @@ class Scene:
             fd.set_weight(Pango.Weight.BOLD)
         layout.set_font_description(fd)
         if mark:  # оранжевая звёздочка Claude перед заголовком
-            star = '<span foreground="#D77757">✻</span> '
+            star = f'<span foreground="{self.mark_color}">✻</span> '
             layout.set_markup(star + GLib.markup_escape_text(text, -1), -1)
         else:
             layout.set_text(text, -1)
@@ -137,7 +154,7 @@ class Scene:
         self._draw_banner(cr)
         cr.pop_group_to_source()
         cr.paint_with_alpha(k)
-        self._draw_claude(cr, self._rise(t, leave_t))
+        self._draw_mascot(cr, self._rise(t, leave_t))
 
     @staticmethod
     def _rise(t, leave_t):
@@ -152,8 +169,7 @@ class Scene:
             p *= 1 - q * q * (2.7 * q - 1.7)
         return p
 
-    @staticmethod
-    def _draw_claude(cr, p):
+    def _draw_mascot(self, cr, p):
         if p <= 0:
             return
         cr.save()
@@ -161,11 +177,11 @@ class Scene:
         cr.rectangle(CX0, 0, CW, BASE)  # ниже линии не видно — «прячется»
         cr.clip()
         top = BASE - round(CH * p)
-        for r, line in enumerate(SPRITE):
+        for r, line in enumerate(self.sprite):
             for c, ch in enumerate(line):
                 if ch == ".":
                     continue
-                cr.set_source_rgb(*(INK if ch == "E" else ORANGE))
+                cr.set_source_rgb(*(INK if ch == "E" else self.accent))
                 cr.rectangle(CX0 + c * P, top + r * P, P, P)
                 cr.fill()
         cr.restore()
@@ -185,7 +201,7 @@ class Scene:
         self._rounded(cr, b, b, BW - 2 * b, h_box - 2 * b, R)
         cr.set_source_rgba(*BG)
         cr.fill_preserve()
-        cr.set_source_rgb(*ORANGE)
+        cr.set_source_rgb(*self.accent)
         cr.set_line_width(BORDER)
         cr.stroke()
 
@@ -386,6 +402,7 @@ def run_daemon():
             continue
         subprocess.Popen(
             [sys.executable, os.path.abspath(__file__),
+             "--agent", "codex" if ev.get("agent") == "codex" else "claude",
              "--project", str(ev.get("project", "")),
              "--detail", str(ev.get("detail", "")),
              "--win-id", str(ev.get("win_id", ""))],
@@ -394,7 +411,7 @@ def run_daemon():
 
 
 def send_notify(args):
-    ev = dict(project=args.project, detail=args.detail, win_id=args.win_id)
+    ev = dict(agent=args.agent, project=args.project, detail=args.detail, win_id=args.win_id)
     try:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as c:
             c.settimeout(1)
@@ -406,6 +423,7 @@ def send_notify(args):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--agent", choices=("claude", "codex"), default="claude")
     ap.add_argument("--project", default="")
     ap.add_argument("--detail", default="")
     ap.add_argument("--win-id", default="")
@@ -428,7 +446,7 @@ def main():
     args = ap.parse_args()
     if args.demo:
         args.project = args.project or os.path.basename(os.getcwd()) or "nixos"
-        args.detail = args.detail or "Заголовок окна сессии (задача Claude)"
+        args.detail = args.detail or "Заголовок окна сессии"
         if args.stay == STAY_T:
             args.stay = 15.0
 
@@ -439,12 +457,12 @@ def main():
         send_notify(args)
         return
     if args.frames:
-        render_frames(Scene(args.project, args.detail), args.frames, args.fps)
+        render_frames(Scene(args.project, args.detail, args.agent), args.frames, args.fps)
         return
 
     slot, slot_path = take_slot()
     try:
-        run_window(args, Scene(args.project, args.detail), slot)
+        run_window(args, Scene(args.project, args.detail, args.agent), slot)
     finally:
         if slot_path:
             try:

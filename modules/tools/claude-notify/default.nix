@@ -40,7 +40,15 @@ let
     runtimeInputs = [ claude-peek ] ++ (with pkgs; [ jq niri procps coreutils ]);
     text = ''
       event="''${1:-stop}"
-      input="$(cat)"
+      agent=claude
+      if [ "$event" = codex ]; then
+        agent=codex
+        input="''${2:-}"
+        [ "$(jq -r '.type // empty' <<<"$input")" = agent-turn-complete ] || exit 0
+      else
+        [ "$event" = stop ] || exit 0
+        input="$(cat)"
+      fi
 
       cwd="$(jq -r '.cwd // empty' <<<"$input")"
       project="$(basename "''${cwd:-$PWD}")"
@@ -57,19 +65,17 @@ let
           win_title="$(jq -r '.title' <<<"$match")"
           break
         fi
-        pid="$(ps -o ppid= -p "$pid" | tr -d ' ')"
+        pid="$(ps -o ppid= -p "$pid" | tr -d ' ' || true)"
       done
 
       # Окно уже в фокусе — не мешаем.
-      focused="$(niri msg --json focused-window 2>/dev/null | jq -r '.id // empty')"
+      focused="$(niri msg --json focused-window 2>/dev/null | jq -r '.id // empty' || true)"
       if [ -n "$win_id" ] && [ "$win_id" = "$focused" ]; then
         exit 0
       fi
 
-      [ "$event" = stop ] || exit 0
-
       # Служба выключена — сокета нет, claude-peek --notify тихо ничего не делает.
-      claude-peek --notify --project "$project" --detail "''${win_title:-$cwd}" --win-id "$win_id" \
+      claude-peek --notify --agent "$agent" --project "$project" --detail "''${win_title:-$cwd}" --win-id "$win_id" \
         </dev/null >/dev/null 2>&1 &
       disown
     '';
@@ -94,7 +100,7 @@ in
 
   systemd.user.services.claude-peek = {
     Unit = {
-      Description = "Claude Code: уведомление о завершении сессии";
+      Description = "Claude Code / Codex: уведомление о завершении сессии";
       PartOf = [ "graphical-session.target" ];
       After = [ "graphical-session.target" ];
     };

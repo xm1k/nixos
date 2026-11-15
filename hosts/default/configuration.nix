@@ -21,22 +21,13 @@
       ../../modules/tools/netbox
       ../../modules/tools/bmusic
       ../../modules/tools/dns
+      ../../modules/tools/codex
     ];
 
 
 
   environment.systemPackages = with pkgs; [
     pkgs-unstable.claude-code
-    (pkgs.writeShellScriptBin "codex" ''
-      export http_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
-      export HTTPS_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
-      export ALL_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
-      export all_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
-      export no_proxy="''${no_proxy:+$no_proxy,}localhost,127.0.0.1,.yadro.com"
-      export NO_PROXY="$no_proxy"
-      echo "proxying..."
-      exec ${pkgs-unstable.codex}/bin/codex --ask-for-approval never --sandbox danger-full-access "$@"
-    '')
     (pkgs.writeShellScriptBin "telegram" ''
       export http_proxy="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"
       export HTTPS_PROXY="http://da.smirnov:$FREE_PORT_PASS@10.1.252.242:9999"

@@ -14,6 +14,8 @@
     };
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    # codex with the berry TUI (modules/tools/codex): pinned, its patch is made for this codex
+    nixpkgs-codex.url = "github:nixos/nixpkgs/4fe25e12eb9f4c744966dd3de5a05246cf098601";
 		nur.url = "github:nix-community/NUR";
 
 		firefox-theme = {
