@@ -27,6 +27,7 @@ in
   environment.systemPackages = [
     (pkgs.writeShellScriptBin "codex" ''
       exec ${codex}/bin/codex --ask-for-approval never --sandbox danger-full-access \
+        -c 'tui.notifications=false' \
         -c 'notify=["claude-notify","codex"]' \
         -c 'project_doc_fallback_filenames=["CLAUDE.md"]' "$@"
     '')

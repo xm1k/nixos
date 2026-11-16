@@ -65,6 +65,9 @@ type Player struct {
 	retries    int
 	buffering  bool
 	prepared   string
+	progressAt time.Time
+	retryPos   float64
+	generation uint64
 
 	listen         *listen
 	switchHow      string
@@ -72,6 +75,7 @@ type Player struct {
 	pendingRefresh bool
 	lastEvent      chan struct{}
 	extending      bool
+	extendDone     chan struct{}
 
 	likes map[string]bool
 	msg   string
@@ -156,6 +160,7 @@ func (p *Player) ensureMPV() error {
 	p.mpv = m
 	p.loaded = false
 	go p.events(m)
+	go p.watchdog(m)
 	return nil
 }
 
@@ -169,6 +174,7 @@ func (p *Player) playAt(i int, pos float64) error {
 		return err
 	}
 	p.finalizeListen()
+	p.generation++
 	p.st.Idx = i
 	t := p.st.Queue[i]
 	p.listen = &listen{t: t, last: -1}
@@ -200,12 +206,17 @@ func (p *Player) load(t Track, pos float64) error {
 	p.entry = r.Entry
 	p.seekOnLoad = pos
 	p.loaded, p.pos, p.dur, p.buffering = true, pos, t.Seconds(), true
+	p.paused, p.progressAt, p.retryPos = false, time.Now(), pos
 	_ = p.mpv.Set("pause", false)
 	return nil
 }
 
 func (p *Player) next(auto bool) error {
-	if auto && p.st.Repeat == "one" {
+	return p.advance(auto, false)
+}
+
+func (p *Player) advance(auto, broken bool) error {
+	if auto && !broken && p.st.Repeat == "one" {
 		p.switchHow = "ended"
 		return p.playAt(p.st.Idx, 0)
 	}
@@ -220,10 +231,14 @@ func (p *Player) next(auto bool) error {
 	case p.st.Repeat == "all" && len(p.st.Queue) > 0:
 		return p.playAt(0, 0)
 	case auto || p.st.Wave != "":
+		generation := p.generation
 		go func() {
 			p.extend()
 			p.mu.Lock()
 			defer p.mu.Unlock()
+			if generation != p.generation || p.paused {
+				return
+			}
 			if p.st.Idx < len(p.st.Queue)-1 {
 				_ = p.playAt(p.st.Idx+1, 0)
 			} else {
@@ -298,7 +313,7 @@ func (p *Player) toggle() error {
 		}
 		return p.playAt(max(p.st.Idx, 0), p.st.Pos)
 	}
-	return p.mpv.Set("pause", !p.paused)
+	return p.setPause(!p.paused)
 }
 
 func (p *Player) setPause(v bool) error {
@@ -306,9 +321,14 @@ func (p *Player) setPause(v bool) error {
 		if !v {
 			return p.toggle()
 		}
+		p.paused = true
 		return nil
 	}
-	return p.mpv.Set("pause", v)
+	if err := p.mpv.Set("pause", v); err != nil {
+		return err
+	}
+	p.paused, p.progressAt = v, time.Now()
+	return nil
 }
 
 func parseTime(s string) (float64, error) {
@@ -443,18 +463,26 @@ func (p *Player) appendNew(ts []Track) int {
 
 func (p *Player) extendRadio() {
 	p.mu.Lock()
+	if p.extending {
+		done := p.extendDone
+		p.mu.Unlock()
+		<-done
+		return
+	}
 	t := p.cur()
-	if t == nil || p.extending || p.st.Repeat != "off" {
+	if t == nil || p.st.Repeat != "off" {
 		p.mu.Unlock()
 		return
 	}
 	p.extending = true
+	p.extendDone = make(chan struct{})
 	id := t.VideoID
 	p.mu.Unlock()
 	ts, err := p.api.Radio(id)
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.extending = false
+	close(p.extendDone)
 	if err != nil {
 		log.Printf("radio: %v", err)
 		return
@@ -464,11 +492,18 @@ func (p *Player) extendRadio() {
 
 func (p *Player) waveMore() int {
 	p.mu.Lock()
-	if p.st.Wave == "" || p.extending {
+	if p.extending {
+		done := p.extendDone
+		p.mu.Unlock()
+		<-done
+		return 0
+	}
+	if p.st.Wave == "" {
 		p.mu.Unlock()
 		return 0
 	}
 	p.extending = true
+	p.extendDone = make(chan struct{})
 	mode := p.st.Wave
 	q := p.st.Queue[max(0, len(p.st.Queue)-150):]
 	ex := make([]string, len(q))
@@ -480,6 +515,7 @@ func (p *Player) waveMore() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.extending = false
+	close(p.extendDone)
 	if err != nil {
 		log.Printf("wave: %v", err)
 		return 0
@@ -663,6 +699,55 @@ func (p *Player) status() Status {
 
 // ---------- mpv events ----------
 
+const playbackStallLimit = 45 * time.Second
+
+func (p *Player) watchdog(m *MPV) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-m.dead:
+			return
+		case now := <-ticker.C:
+			p.mu.Lock()
+			if p.mpv == m {
+				p.checkProgress(now)
+			}
+			p.mu.Unlock()
+		}
+	}
+}
+
+// Call with p.mu held. mpv can keep reconnecting without emitting end-file.
+func (p *Player) checkProgress(now time.Time) {
+	if !p.loaded || p.paused {
+		p.progressAt = now
+		return
+	}
+	if now.Sub(p.progressAt) >= playbackStallLimit {
+		p.retryPlayback("no playback progress for 45s")
+	}
+}
+
+func (p *Player) retryPlayback(reason string) {
+	c := p.cur()
+	if c != nil && p.retries < 3 {
+		p.retries++
+		log.Printf("playback %s, track %s at %.0f/%.0f, retry %d", reason, c.VideoID, p.pos, p.dur, p.retries)
+		if err := p.load(*c, p.pos); err == nil {
+			return
+		} else {
+			log.Printf("playback reload failed: %v", err)
+		}
+	}
+	p.loaded, p.buffering = false, false
+	p.say("Не удалось воспроизвести трек, дальше")
+	p.listen = nil // a broken track is not a listening preference
+	if err := p.advance(true, true); err != nil {
+		p.say("Не удалось перейти к следующему треку: " + err.Error())
+	}
+}
+
 func (p *Player) events(m *MPV) {
 	for ev := range m.Events {
 		p.mu.Lock()
@@ -694,12 +779,19 @@ func (p *Player) handle(ev mpvEvent) {
 				}
 				l.last = *v
 			}
+			if *v != p.pos {
+				p.progressAt = time.Now()
+			}
 			p.pos = *v
+			if p.retries > 0 && p.pos > p.retryPos+30 {
+				p.retries = 0
+			}
 			if p.loaded && time.Since(p.saved) > 10*time.Second {
 				p.save()
 			}
 		case "pause":
 			_ = json.Unmarshal(ev.Data, &p.paused)
+			p.progressAt = time.Now()
 		case "duration":
 			var v *float64
 			if json.Unmarshal(ev.Data, &v) == nil && v != nil && *v > 0 {
@@ -727,29 +819,22 @@ func (p *Player) handle(ev mpvEvent) {
 		if ev.Entry != 0 && p.entry != 0 && ev.Entry != p.entry {
 			return // a track we already replaced
 		}
-		c := p.cur()
+		if p.paused && (ev.Reason == "error" || ev.Reason == "eof") {
+			p.loaded, p.buffering = false, false
+			p.save()
+			return // resume explicitly, without undoing the listener's pause
+		}
 		switch ev.Reason {
 		case "eof":
 			// the stream broke off early: resume where it stopped
-			if c != nil && p.dur > 30 && p.pos < p.dur-5 && p.retries < 3 {
-				p.retries++
-				log.Printf("premature eof at %.0f/%.0f, retry %d", p.pos, p.dur, p.retries)
-				_ = p.load(*c, p.pos)
+			if p.cur() != nil && p.dur > 30 && p.pos < p.dur-5 {
+				p.retryPlayback("premature eof")
 				return
 			}
 			p.loaded = false
 			_ = p.next(true)
 		case "error":
-			if c != nil && p.retries < 2 {
-				p.retries++
-				log.Printf("playback error %q, retry %d", ev.Error, p.retries)
-				_ = p.load(*c, p.pos)
-				return
-			}
-			p.loaded = false
-			p.say("Не удалось воспроизвести трек, дальше")
-			p.listen = nil
-			_ = p.next(true)
+			p.retryPlayback(ev.Error)
 		}
 	}
 }

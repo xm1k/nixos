@@ -7,6 +7,7 @@
       ./hardware-configuration.nix
       ./screen.nix
       ../../modules/tools/bnet-ap
+      ../../modules/tools/battery
     ];
 
   # Точка доступа Wi-Fi в b.net для гостей: `bnet-ap on|off|status|qr`

@@ -53,8 +53,10 @@ func StartMPV(token string, volume float64) (*MPV, error) {
 		"--audio-display=no", "--keep-open=no",
 		fmt.Sprintf("--volume=%g", volume),
 		"--cache=yes", "--demuxer-max-bytes=64MiB",
-		// ffmpeg reconnects when the stream stalls instead of reporting a premature EOF
-		"--stream-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=5",
+		"--network-timeout=15",
+		// Bound FFmpeg's reconnects; the player watchdog also handles stalls
+		// that never produce an end-file event.
+		"--stream-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=5,reconnect_max_retries=2,reconnect_delay_total_max=10",
 		"--user-agent=bmusic",
 		"--title=bmusic",
 	}

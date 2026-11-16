@@ -35,6 +35,7 @@
     ./tools/commands.nix
     ./tools/claude-notify
     ./tools/claude-skills.nix
+    ./tools/dictation
     ./tools/shell.nix
     ./tools/git.nix
     ./tools/activity

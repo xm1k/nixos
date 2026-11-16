@@ -356,6 +356,7 @@ binds {
     Alt+Shift+W hotkey-overlay-title="Zellij sessions" { spawn "alacritty" "-e" "zj"; }
     Mod+W hotkey-overlay-title="Noctalia Launcher" { spawn-sh "noctalia msg panel-open launcher"; }
     Ctrl+Alt+L hotkey-overlay-title="Lock the Screen: hyprlock" { spawn "hyprlock"; }
+    Ctrl+Alt+R repeat=false hotkey-overlay-title="Диктовка: начать / остановить" { spawn "dictation-toggle"; }
 
     // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
     // Note: the entire command goes as a single argument. It's passed verbatim to `sh -c`.
