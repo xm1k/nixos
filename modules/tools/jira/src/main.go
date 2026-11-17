@@ -112,6 +112,38 @@ func choose(header string, options []string) (int, error) {
 	return -1, cmp.Or(err, errCancelled)
 }
 
+func chooseMany(header string, options []string) ([]int, error) {
+	if len(options) == 0 {
+		return nil, errors.New("не из чего выбирать")
+	}
+	out, err := gum(strings.Join(options, "\n"), "choose", "--no-limit", "--header", header, "--height", "15")
+	if err != nil {
+		return nil, err
+	}
+	if out == "" {
+		return nil, errCancelled
+	}
+	var selected []int
+	seen := map[int]bool{}
+	for _, line := range strings.Split(out, "\n") {
+		found := false
+		for i, option := range options {
+			if line == option {
+				if !seen[i] {
+					selected = append(selected, i)
+					seen[i] = true
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("неизвестный вариант выбора: %q", line)
+		}
+	}
+	return selected, nil
+}
+
 // ---- arguments ------------------------------------------------------------------
 
 // issueKey normalizes an issue reference: a number from `jira list` ("3"), a

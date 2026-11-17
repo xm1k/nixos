@@ -1,10 +1,51 @@
 package main
 
 import (
+	"errors"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 	"time"
 )
+
+func TestChooseMany(t *testing.T) {
+	dir := t.TempDir()
+	// A fake gum checks the command and returns controlled selections.
+	script := "#!/bin/sh\n[ \"$1\" = choose ] && [ \"$2\" = --no-limit ] || exit 2\ncat >/dev/null\nprintf '%s' \"$TEST_SELECTION\"\nexit \"${TEST_EXIT:-0}\"\n"
+	if err := os.WriteFile(filepath.Join(dir, "gum"), []byte(script), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	for _, tc := range []struct {
+		name, output, exit string
+		want               []int
+		wantErr            bool
+	}{
+		{"multiple", "RE-3\nRE-1\n", "0", []int{2, 0}, false},
+		{"duplicate", "RE-1\nRE-1", "0", []int{0}, false},
+		{"empty", "", "0", nil, true},
+		{"cancelled", "RE-1", "130", nil, true},
+		{"unknown", "RE-9", "0", nil, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("TEST_SELECTION", tc.output)
+			t.Setenv("TEST_EXIT", tc.exit)
+			got, err := chooseMany("Задачи", []string{"RE-1", "RE-2", "RE-3"})
+			if (err != nil) != tc.wantErr || !slices.Equal(got, tc.want) {
+				t.Fatalf("chooseMany = %v, %v; want %v, error=%v", got, err, tc.want, tc.wantErr)
+			}
+		})
+	}
+	if _, err := chooseMany("Задачи", nil); err == nil {
+		t.Fatal("empty options must fail")
+	}
+	t.Setenv("TEST_SELECTION", "")
+	t.Setenv("TEST_EXIT", "0")
+	if _, err := chooseMany("Задачи", []string{"RE-1"}); !errors.Is(err, errCancelled) {
+		t.Fatalf("empty selection = %v, want cancellation", err)
+	}
+}
 
 func testCache() *Cache {
 	col := func(name string, ids ...string) Column {

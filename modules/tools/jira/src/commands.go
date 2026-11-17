@@ -245,11 +245,19 @@ func issueArg(args []string, header string) (string, error) {
 	if !interactive() {
 		return "", errors.New("укажите задачу: номер из jira list или ключ")
 	}
-	var options, keys []string
+	options, keys := issueOptions()
+	i, err := choose(header, options)
+	if err != nil {
+		return "", err
+	}
+	return keys[i], nil
+}
+
+func issueOptions() (options, keys []string) {
 	for _, op := range loadQueue().Pending {
 		if op.Kind == "create" {
 			ref := "@" + strconv.Itoa(op.ID)
-			options, keys = append(options, ref+"  "+op.Issue.Summary+"  (создаётся)"), append(keys, ref)
+			options, keys = append(options, ref+"  "+clip(op.Issue.Summary, 160)+"  (создаётся)"), append(keys, ref)
 		}
 	}
 	cache := loadCache()
@@ -259,15 +267,11 @@ func issueArg(args []string, header string) (string, error) {
 	})
 	for _, is := range issues {
 		if !hidden(is) {
-			options = append(options, fmt.Sprintf("%d  %s  [%s]  %s", is.ID, is.Key, is.Status, is.Summary))
+			options = append(options, fmt.Sprintf("%d  %s  [%s]  %s", is.ID, is.Key, is.Status, clip(is.Summary, 160)))
 			keys = append(keys, is.Key)
 		}
 	}
-	i, err := choose(header, options)
-	if err != nil {
-		return "", err
-	}
-	return keys[i], nil
+	return options, keys
 }
 
 func askEstimate() (string, error) {
@@ -420,7 +424,7 @@ func createCmd() *cobra.Command {
 }
 
 func moveCmd() *cobra.Command {
-	var wait bool
+	var wait, many bool
 	var comment string
 	cmd := &cobra.Command{
 		Use:     "move [задача] [колонка|статус|номер колонки]",
@@ -430,21 +434,45 @@ func moveCmd() *cobra.Command {
   jira move 3 in progress    # по имени колонки, статуса или перехода
   jira move 3 2              # во вторую колонку доски
   jira move cur pending      # текущую задачу (jira cur)
+  jira move --many           # отметить несколько задач, затем выбрать колонку
+  jira move --many done -c "Готово"  # общая колонка и комментарий
   jira move 3 done -c "Выкатили"   # в закрывающую колонку — с комментарием`,
 		ValidArgsFunction: completeMove,
 		RunE: func(_ *cobra.Command, args []string) error {
-			key, err := issueArg(args, "Какую задачу перенести?")
-			if err != nil {
-				return err
+			var keys []string
+			var err error
+			targetArgs := args
+			if many {
+				if !interactive() {
+					return errors.New("--many требует терминала для выбора задач")
+				}
+				options, refs := issueOptions()
+				selected, err := chooseMany("Какие задачи перенести? Пробел — отметить · Enter — готово", options)
+				if err != nil {
+					return err
+				}
+				for _, i := range selected {
+					keys = append(keys, refs[i])
+				}
+			} else {
+				key, err := issueArg(args, "Какую задачу перенести?")
+				if err != nil {
+					return err
+				}
+				keys = []string{key}
+				targetArgs = args[min(1, len(args)):]
 			}
 			cache := loadCache()
-			target := strings.Join(args[min(1, len(args)):], " ")
+			target := strings.Join(targetArgs, " ")
 			if target == "" {
 				if !interactive() || len(cache.Columns) == 0 {
 					return errors.New("укажите колонку: jira move <задача> <колонка>")
 				}
 				header, cur := "Куда?", -1
-				if is := cache.find(key); is != nil {
+				key := keys[0]
+				if len(keys) > 1 {
+					header = fmt.Sprintf("Куда перенести задачи (%d)?", len(keys))
+				} else if is := cache.find(key); is != nil {
 					header, cur = issueLabel(cache, key)+" ["+is.Status+"] — куда?", cache.columnOf(is.StatusID)
 				}
 				var options []string
@@ -464,13 +492,23 @@ func moveCmd() *cobra.Command {
 			if i, err := strconv.Atoi(target); err == nil && i >= 1 && i <= len(cache.Columns) {
 				target = cache.Columns[i-1].Name
 			}
-			if comment, err = moveComment(cache, key, target, comment); err != nil {
+			label := keys[0]
+			if len(keys) > 1 {
+				label = fmt.Sprintf("Задачи (%d)", len(keys))
+			}
+			if comment, err = moveComment(cache, label, target, comment); err != nil {
 				return err
 			}
-			return submit(&Op{Kind: "move", Key: key, Target: target, Comment: comment}, wait)
+			for _, key := range keys {
+				if err := submit(&Op{Kind: "move", Key: key, Target: target, Comment: comment}, wait); err != nil {
+					return fmt.Errorf("%s: %w", key, err)
+				}
+			}
+			return nil
 		},
 	}
 	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "дождаться ответа Jira, без очереди")
+	cmd.Flags().BoolVarP(&many, "many", "m", false, "выбрать несколько задач (Пробел — отметить, Enter — готово); аргументы — общая колонка")
 	cmd.Flags().StringVarP(&comment, "comment", "c", "", "комментарий после переноса ('-' — из stdin)")
 	return cmd
 }
@@ -938,7 +976,8 @@ func completeVersions(*cobra.Command, []string, string) ([]string, cobra.ShellCo
 }
 
 func completeMove(cmd *cobra.Command, args []string, s string) ([]string, cobra.ShellCompDirective) {
-	if len(args) != 1 {
+	many, _ := cmd.Flags().GetBool("many")
+	if !many && len(args) != 1 {
 		return completeIssues(cmd, args, s)
 	}
 	var out []string
