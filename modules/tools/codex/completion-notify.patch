@@ -1,0 +1,36 @@
+--- a/tui/src/chatwidget/turn_runtime.rs
++++ b/tui/src/chatwidget/turn_runtime.rs
+@@ -243,6 +243,33 @@
+                     .as_deref()
+                     .is_some_and(|turn_id| self.should_hide_realtime_delegation(turn_id))
+             {
++                // The legacy core notify hook runs before the TUI decides whether
++                // queued input or an active goal will continue the work. Notify the
++                // desktop here, alongside the terminal's actual idle notification.
++                if let Some(program) = std::env::var_os("CODEX_TUI_NOTIFY") {
++                    let payload = serde_json::json!({
++                        "type": "agent-turn-complete",
++                        "thread-id": self.thread_id.map(|id| id.to_string()),
++                        "turn-id": self.turn_lifecycle.last_turn_id,
++                        "cwd": self.config.cwd,
++                        "last-assistant-message": notification_response,
++                    });
++                    match tokio::process::Command::new(program)
++                        .arg("codex")
++                        .arg(payload.to_string())
++                        .stdin(std::process::Stdio::null())
++                        .stdout(std::process::Stdio::null())
++                        .stderr(std::process::Stdio::null())
++                        .spawn()
++                    {
++                        Ok(mut child) => {
++                            tokio::spawn(async move {
++                                let _ = child.wait().await;
++                            });
++                        }
++                        Err(err) => tracing::warn!(%err, "Could not send desktop notification"),
++                    }
++                }
+                 self.notify(Notification::AgentTurnComplete {
+                     response: notification_response,
+                 });

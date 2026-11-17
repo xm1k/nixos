@@ -31,12 +31,12 @@ INTERACTIVE = {
     "ssh", "mosh", "nvim", "vim", "vi", "nano", "claude", "kilo", "less", "more", "man",
     "htop", "btop", "top", "k9s", "zj", "zj-here", "shpool", "bash", "sh", "zsh", "fish",
     "python", "python3", "ipython", "psql", "mysql", "sqlite3", "watch", "tmux", "zellij",
+    "codex", "work", "socat", "ApacheDirectoryStudio", "nautilus", "k0s",
     "work-vpn", "fzf", "yazi", "lazygit", "tig", "nix-shell", "bat", "journalctl", "tail",
 }
 INTERACTIVE_PREFIX = ("nix develop", "kubectl exec", "k0s kubectl exec", "podman exec", "podman run -it",
                       "docker exec", "kubectl logs -f", "git log", "git diff", "git show")
-INTERACTIVE_AFTER = 15 * 60          # дольше 15 минут — точно не «ожидание»
-PREP_MAX = 120                       # пауза перед командой до 2 мин считается набором/обдумыванием
+PREP_MAX = 120                       # короткая пауза между командами; причина неизвестна
 SEQ_GAP = 300                        # команды ближе 5 мин — одна цепочка
 WRAPPERS = {"sudo", "doas", "time", "nohup", "env", "command", "exec", "builtin"}
 NOISE = {"clear", "ls", "ll", "la", "exit", "pwd"}
@@ -123,7 +123,21 @@ def is_interactive(cmd, dur):
     joined = " ".join(t)
     if any(joined.startswith(p) for p in INTERACTIVE_PREFIX):
         return True
-    return dur is not None and dur > INTERACTIVE_AFTER
+    # netbox по умолчанию открывает SSH; ls/show/exec/update — обычные команды.
+    if os.path.basename(t[0]) == "netbox" and len(t) > 1:
+        return t[1] not in {"ls", "show", "exec", "update", "completion", "help", "--help", "-h"}
+    # Jira может открывать выбор задачи, статуса или ввод комментария.
+    if os.path.basename(t[0]) == "jira" and len(t) > 1:
+        return t[1] in {"done", "m", "move", "c", "comment", "create", "switch", "set"}
+    # ping без ограничения числа/времени работает до остановки пользователем.
+    if os.path.basename(t[0]) == "ping":
+        return not any(re.match(r"^-(?:c|w)(?:\d|$)", x) for x in t[1:])
+    return False
+
+
+def is_failure(exit_code):
+    # Ctrl+C / SIGTERM — остановка, SIGPIPE часто возникает при закрытии pager.
+    return exit_code not in (0, None, -1, 130, 141, 143)
 
 
 def load_shell(since):
@@ -165,7 +179,7 @@ def report_shell(rows, top):
         a = agg[tool_key(r["cmd"])]
         a["n"] += 1
         a["prep"] += r["prep"] or 0
-        if r["exit"] not in (0, None, -1):
+        if is_failure(r["exit"]):
             a["fail"] += 1
         if r["dur"] is not None:
             a["inter" if r["inter"] else "wait"] += r["dur"]
@@ -174,20 +188,25 @@ def report_shell(rows, top):
     total_prep = sum(a["prep"] for a in agg.values())
     total_inter = sum(a["inter"] for a in agg.values())
     days = len({time.strftime("%F", time.localtime(r["t"])) for r in rows})
-    print(f"  Дней с активностью: {days}.  Ожидание выполнения: {fmt(total_wait)}.  "
-          f"Набор/обдумывание: {fmt(total_prep)}.  Внутри интерактивных: {fmt(total_inter)}.")
+    print(f"  Дней с активностью: {days}.  Выполнение прочих команд: {fmt(total_wait)}.  "
+          f"Короткие паузы: {fmt(total_prep)}.  Интерактивные/длительные сессии: {fmt(total_inter)}.")
+    print("  Длительность команды не равна потерянному времени; паузы не измеряют набор текста.")
+    unknown = sum(r["dur"] is None for r in rows)
+    cancelled = sum(r["exit"] in (130, 143) for r in rows)
+    sigpipe = sum(r["exit"] == 141 for r in rows)
+    print(f"  Без записи завершения: {unknown}; остановлено SIGINT/SIGTERM: {cancelled}; SIGPIPE: {sigpipe}.")
 
-    print("\n  Команды по суммарной цене (ожидание + набор). Это кандидаты на скрипт/алиас:")
+    print("\n  Команды по длительности выполнения + паузе перед ними (причина паузы неизвестна):")
     items = sorted(agg.items(), key=lambda kv: -(kv[1]["wait"] + kv[1]["prep"]))
     table([[clip(k, 34), a["n"], fmt(a["wait"] + a["prep"]), fmt(a["wait"]), fmt(a["prep"]),
             fmt(a["wait"] / a["n"]), a["fail"] or ""] for k, a in items[:top]],
-          ["команда", "раз", "цена", "ожидание", "набор", "ср.ожид", "fail"])
+          ["команда", "раз", "сумма", "выполн.", "пауза", "ср.вып.", "ошибки"])
 
     print("\n  Самые частые команды целиком (аргументы обобщены):")
     pc = Counter(pattern(r["cmd"]) for r in rows if tool_key(r["cmd"]) not in NOISE)
     table([[clip(p, 60), n] for p, n in pc.most_common(top)], ["шаблон", "раз"])
 
-    print("\n  Самые долгие ожидания (одиночные запуски):")
+    print("\n  Самые долгие выполнения прочих команд (не обязательно ожидание):")
     slow = sorted((r for r in rows if r["dur"] and not r["inter"]), key=lambda r: -r["dur"])[:min(top, 10)]
     table([[clip(r["cmd"], 60), fmt(r["dur"]), time.strftime("%a %H:%M", time.localtime(r["t"]))] for r in slow],
           ["команда", "длит.", "когда"])
@@ -215,14 +234,14 @@ def report_shell(rows, top):
     retry = Counter()
     for lst in by_sess.values():
         for a, b in zip(lst, lst[1:]):
-            if a["exit"] not in (0, None, -1) and a["dur"] is not None and b["t"] - a["t"] - a["dur"] < 120 \
+            if is_failure(a["exit"]) and a["dur"] is not None and 0 <= b["t"] - a["t"] - a["dur"] < 120 \
                     and tokens(a["cmd"])[:1] == tokens(b["cmd"])[:1]:
                 retry[tool_key(a["cmd"])] += 1
     nf = Counter(tokens(r["cmd"])[0] for r in rows if r["exit"] == 127 and tokens(r["cmd"]))
-    print("\n  Упало → сразу перезапустил с правкой (непонятный синтаксис / забытый флаг):")
+    print("\n  Ошибка → повторный запуск того же инструмента (причина и наличие правки неизвестны):")
     table([[k, n] for k, n in retry.most_common(min(top, 10))], ["команда", "раз"])
     if nf:
-        print("\n  command not found (опечатки — кандидаты на алиас):")
+        print("\n  Код 127 (команда не найдена; возможны опечатки или отсутствующие программы):")
         table([[k, n] for k, n in nf.most_common(10)], ["что набрал", "раз"])
 
     print("\n  Где работаешь (каталоги):")
@@ -238,6 +257,9 @@ BROWSER_SUFFIX = re.compile(r"\s+[—–-]\s+(Zen Browser|Mozilla Firefox|Zen|Fi
 
 def norm_title(app, title):
     title = BROWSER_SUFFIX.sub("", title or "")
+    if app in {"Alacritty", "com.mitchellh.ghostty"}:
+        # Анимация индикатора в заголовке не означает новую задачу.
+        title = re.sub(r"^[\u2800-\u28ff◐◑◒◓✳✻✽✶✢·]+\s*", "", title)
     return clip(title, 60) or "(без заголовка)"
 
 
@@ -358,7 +380,7 @@ def report_niri(since, until, top):
     active = sum(s[2] for s in segs)
     idle_total = sum(subtract(max(s, since), min(e, until), []) for s, e in idle if e > since and s < until)
     switches = max(len(visits) - 1, 0)
-    print(f"  Активное время: {fmt(active)}  (idle/lock/sleep вычтено: {fmt(idle_total)}).")
+    print(f"  Время в фокусе вне idle: {fmt(active)}  (idle/lock/sleep вычтено: {fmt(idle_total)}).")
     if active:
         print(f"  Переключений между приложениями: {switches}  "
               f"(≈{switches / (active / 3600):.0f}/час, медиана визита {fmt(statistics.median([v[3] for v in visits if v[3] > 0] or [0]))}).")
@@ -393,14 +415,15 @@ def report_niri(since, until, top):
     table([[clip(a, 16), title, fmt(x)] for (a, title), x in tt.most_common(top)], ["app", "заголовок", "время"],
           ["<", "<", ">"])
 
-    # Пинг-понг: A → B (коротко) → A. Типично «подсмотреть/скопировать что-то и вернуться».
+    # A → B (коротко) → A. Содержимое действий внутри окна неизвестно.
     pp, pp_t = Counter(), Counter()
     for a, b, c in zip(visits, visits[1:], visits[2:]):
-        if a[0] == c[0] != b[0] and b[3] < 60:
+        if a[0] == c[0] != b[0] and a[3] > 0 and c[3] > 0 and 0 < b[3] < 60 \
+                and b[1] - a[2] < 1 and c[1] - b[2] < 1:
             key = f"{a[0]} ⇄ {b[0]}"
             pp[key] += 1
             pp_t[key] += b[3]
-    print("\n  Пинг-понг (ушёл в B меньше чем на минуту и вернулся) — сюда просится автоматизация:")
+    print("\n  Короткие возвраты A → B → A (кандидаты для разбора; не мера потерь):")
     table([[clip(k, 50), n, fmt(pp_t[k]), fmt(pp_t[k] / n)] for k, n in pp.most_common(top)],
           ["пара", "раз", "в B всего", "в среднем"])
 
