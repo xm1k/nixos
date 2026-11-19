@@ -15,10 +15,11 @@ let
   pkgs-codex = import inputs.nixpkgs-codex { inherit (pkgs.stdenv.hostPlatform) system; };
   codex = pkgs-codex.codex.overrideAttrs (old: {
     patches = (old.patches or [ ]) ++ [ ./berry-tui.patch ./completion-notify.patch ];
-    # 12 rustc at once ran out of the laptop's 15 GB (codex-tui alone takes ~4 GB):
-    # fewer jobs and no debug info — the build is a bit slower but survives.
+    # 12 rustc at once ran out of the laptop's 15 GB (codex-tui alone takes ~4 GB),
+    # and -j 6 still hit OOM (5 rustc at ~12 GB together, the big crates 2-4 GB each):
+    # 3 jobs and no debug info — the build is slower but survives with a desktop open.
     preBuild = (old.preBuild or "") + ''
-      export NIX_BUILD_CORES=6
+      export NIX_BUILD_CORES=3
       export CARGO_PROFILE_RELEASE_DEBUG=none
     '';
   });

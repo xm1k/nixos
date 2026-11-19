@@ -29,7 +29,8 @@ end
 readSize()
 
 -- level-derived targets and their smoothed current values
-local level = noctalia.state.get("level") or 5
+-- The service loads the persisted level; stay empty until it publishes it.
+local level = tonumber(noctalia.state.get("level")) or 0
 local target = { count = 0, speed = 1, wind = 0 }
 local cur = { speed = 1, wind = 0 }
 local function applyLevel()
