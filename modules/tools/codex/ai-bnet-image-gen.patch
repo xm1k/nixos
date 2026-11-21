@@ -1,0 +1,30 @@
+diff --git a/core/src/tools/spec_plan.rs b/core/src/tools/spec_plan.rs
+--- a/core/src/tools/spec_plan.rs
++++ b/core/src/tools/spec_plan.rs
+@@ -71,2 +71,3 @@
+ use codex_protocol::account::PlanType;
++use codex_protocol::auth::AuthMode;
+ use codex_protocol::config_types::WebSearchMode;
+@@ -817,8 +818,18 @@
+     let provider = turn_context.provider.info();
++    // ai.b.net uses a device token as the API key and authenticates to the
++    // Codex Images backend on the server.
++    let is_ai_bnet = turn_context.config.model_provider_id == "ai_bnet"
++        && matches!(
++            provider
++                .base_url
++                .as_deref()
++                .map(|url| url.trim_end_matches('/')),
++            Some("http://ai.b.net/backend-api/codex" | "https://ai.b.net/backend-api/codex")
++        );
+     provider.uses_openai_actor_authorization()
+         || (provider.requires_openai_auth
+-            && turn_context
+-                .auth_manager
+-                .as_deref()
+-                .is_some_and(AuthManager::current_auth_uses_codex_backend))
++            && turn_context.auth_manager.as_deref().is_some_and(|auth| {
++                auth.current_auth_uses_codex_backend()
++                    || (is_ai_bnet && auth.get_api_auth_mode() == Some(AuthMode::ApiKey))
++            }))
+ }
