@@ -42,7 +42,7 @@ galaxy_extra=""
 case "$container" in
   ansible)
     kind=ansible
-    image=artifactory-nn.atmosphere.yadro.com:443/re-docker-images/ci/jobenv/rei_ansible:2.0.4
+    image=artifactory-nn.atmosphere.yadro.com:443/re-docker-images/ci/jobenv/rei_ansible:2.3.0
     mnt=/rei_ansible_tools
     galaxy=https://galaxy.atmosphere.yadro.com/api
     scenarios=(servers-configure root shell)
